@@ -15,7 +15,7 @@ Available instruments:
 		
 
 Notes:
-    - Some of the codes are very basic and/or in test phase => please report problem/suggestion to Bruno
+    - Some of the codes are very basic and/or in test phase => please report problems/suggestions to Bruno
     - All the codes are not very well documented yet.
     - Be sure to have all the necessary python libraries n
         notably: pyvisa, pyvisa-py (backend @py de pyvisa), pyusb, appropriate GPIB libraries for your OS (linux-gpib for linux)
