@@ -4,8 +4,8 @@ Python based codes to automize Stuart's lab
 Available instruments:
 	
 	Scope:
-		- DPO4104     (ethernet)             =>   codes also to plot interactively the spatio-temporal diagrams
-		- DSA91304a  (ethernet)
+		- DPO4104     (ethernet)
+		- DSA91304a  (ethernet) => codes available also to plot interactively spatio-temporal diagrams
 	
 	Controller:
 		- ITC_4001      (usb)   (very basic, only able to modify the current)
@@ -21,4 +21,4 @@ Notes:
     - Be sure to have all the necessary python libraries
         notably: pyvisa, pyvisa-py (backend @py de pyvisa), pyusb, appropriate GPIB libraries for your OS (linux-gpib for linux)
         Other helpful libraries: matplotlib, numpy, scipy, time, math, ...
-    - Have a look on Prog_Guide folder if you want to implement your own functions and improve the repository
+    - Have a look on Prog_Guide folder if you want to implement your own functions and help improve the repository
