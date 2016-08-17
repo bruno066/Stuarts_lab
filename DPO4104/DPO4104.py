@@ -6,7 +6,7 @@ import sys
 import commands as C
 import time
 
-IP = '169.254.179.77'
+IP = '169.254.172.5'
 
 class DPO_4104():
         def __init__(self,channel=None,filename=None,query=None,command=None,measure=None,PRINT=False):
