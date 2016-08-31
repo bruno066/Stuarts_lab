@@ -4,6 +4,7 @@ import visa as v
 from optparse import OptionParser
 import sys
 import time
+from numpy import zeros,ones,linspace
 
 PORT = '5'
 
@@ -36,15 +37,17 @@ class agilent33220a():
                 self.inst.write('FREQ '+frequency)
                 
             if ramp:
-                self.ramp()
+                self.ramp(ramp)
             
             self.exit()
         
-        def ramp():
-            self.inst.write()
-            self.inst.write()
-            self.inst.write()
-            self.inst.write()
+        def ramp(self,ramp):
+            l   = list(zeros(5000) - 1)
+            lll = list(ones(5000))
+            ll  = list(linspace(-1,1,100+ramp))
+            l.extend(ll);l.extend(lll)
+            s = str(l)[1:-1]
+            self.inst.write('DATA VOLATILE,'+s)
 
         def write(self,query):
             self.inst.write(query)
