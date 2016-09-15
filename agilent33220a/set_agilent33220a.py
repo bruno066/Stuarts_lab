@@ -6,7 +6,6 @@ import sys
 import time
 from numpy import zeros,ones,linspace
 
-PORT = '5'
 
 class agilent33220a():
         def __init__(self,query=None,command=None,offset=None,amplitude=None,frequency=None,ramp=None):

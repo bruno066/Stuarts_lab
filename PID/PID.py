@@ -8,7 +8,7 @@ import time
 PORT = '5'
 
 class TGA_12104():
-        def __init__(self,query=None,command=None,kar=None,auto_lock=None):
+        def __init__(self,query=None,command=None,kar=None,auto_lock=None,lock=None,unlock=None):
             self.command = None
             
             rm = v.ResourceManager('@py')
@@ -35,6 +35,11 @@ class TGA_12104():
                 self.write(self.command)
                 print '\n'
                 self.exit()
+            
+            if lock:
+                self.write('AMAN 1')
+            elif unlock:
+                self.write('AMAN 0')
             
             if auto_lock:
                 self.re_lock()
@@ -75,7 +80,9 @@ if __name__ == '__main__':
     parser.add_option("-c", "--command", type="str", dest="com", default=None, help="Set the command to use." )
     parser.add_option("-q", "--query", type="str", dest="que", default=None, help="Set the query to use." )
     parser.add_option("-a", "--autolock", type="str", dest="autolock", default=None, help="Enable auto locking." )
+    parser.add_option("-l", "--lock", type="str", dest="lock", default=None, help="Lock" )
+    parser.add_option("-u", "--unlock", type="str", dest="unlock", default=None, help="Unlock" )
     (options, args) = parser.parse_args()
     
     ### Start the talker ###
-    TGA_12104(query=options.que,command=options.com,auto_lock=options.autolock)
+    TGA_12104(query=options.que,command=options.com,auto_lock=options.autolock,lock=options.lock,unlock=options.unlock)
