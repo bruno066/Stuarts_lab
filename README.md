@@ -12,7 +12,7 @@ Available instruments:
 		- SIM900         (GPIB)
 		- TGA_12104   (usb)
 		- TLB_6700      (usb)
-		
+		- agilent33220a (ethernet)		
 
 Notes:
 
