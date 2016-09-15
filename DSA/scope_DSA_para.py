@@ -33,7 +33,7 @@ class ytViewer(object):
         self.q = Queue()
         
         # set up shared variables
-        self.params = Manager().dict({'chan':'CHAN1','host':host,'toggle':False,'SAVE':False})
+        self.params = Manager().dict({'chan':chan,'host':host,'toggle':False,'SAVE':False})
         self.worker = Process(target=Acquire, args=(self.params, self.worker_connection,self.q))
         params = self.params   #Opening
         self.worker.start()
@@ -45,15 +45,16 @@ class ytViewer(object):
         self.NORM     = NORM
         self.NMAX     = nmax
         self.fold         = fold
+        self.shear    = 0.
         
-        self.remove_len1 = 6500  # 0 previously
-        self.remove_len2 = 12300 # 1 previously
+        self.remove_len1 = 0  # 0 previously
+        self.remove_len2 = 1000 # 1 previously
         
         self.fig = figure(figsize=(16,7))
         
         self.data                    = randn(self.NMAX*self.fold).reshape(self.NMAX,self.fold)[:,self.remove_len1:-self.remove_len2]
         self.folded_data         = self.data[:,self.remove_len1:-self.remove_len2]
-        self.folded_data_orig = self.folded_data[:,self.remove_len1:-self.remove_len2]
+        self.folded_data_orig    = randn(self.NMAX*self.fold).reshape(self.NMAX,self.fold)
         
         self.X0 = 0
         self.Y0 = 0
@@ -74,14 +75,18 @@ class ytViewer(object):
         
         # create 'remove_len1' slider
         self.remove_len1_sliderax = axes([0.1,0.96,0.8,0.02])
-        self.remove_len1_slider   = Slider(self.remove_len1_sliderax,'beg',0.,self.fold*(3./4),self.remove_len1,'%d')
+        self.remove_len1_slider   = Slider(self.remove_len1_sliderax,'Beg',0.,self.fold*(3./4),self.remove_len1,'%d')
         self.remove_len1_slider.on_changed(self.update_tab)
         
         # create 'remove_len2' slider
         self.remove_len2_sliderax = axes([0.1,0.92,0.8,0.02])
-        self.remove_len2_slider   = Slider(self.remove_len2_sliderax,'end',0.,self.fold*(3./4),self.remove_len2,'%d')
+        self.remove_len2_slider   = Slider(self.remove_len2_sliderax,'End',0.,self.fold*(3./4),self.remove_len2,'%d')
         self.remove_len2_slider.on_changed(self.update_tab)
         
+        # create 'shear' slider
+        self.shear_sliderax = axes([0.1,0.88,0.8,0.02])
+        self.shear_slider   = Slider(self.shear_sliderax,'Shear',-1,1,self.shear,'%1.2f')
+        self.shear_slider.on_changed(self.update_shear)
 
         cid  = self.fig.canvas.mpl_connect('motion_notify_event', self.mousemove)
         cid2 = self.fig.canvas.mpl_connect('key_press_event', self.keypress)
@@ -92,6 +97,9 @@ class ytViewer(object):
 
         gobject.idle_add(self.update_plot)
         show()
+        
+    def update_shear(self,val):
+        self.shear = round(self.shear_slider.val,2)
 
     def update_tab(self,val):
         self.remove_len1 = int(self.remove_len1_slider.val)
@@ -115,13 +123,10 @@ class ytViewer(object):
             self.data            = fromstring(self.bin_data, dtype=int8)
             self.folded_data = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
             
+            self.process_data(self.shear)
+            
             if self.remove_len1!=0 or self.remove_len2!=1: 
-                #if self.remove_len2 == 0
-                    #len(self.folded_data[:,:][0]
-
-                print '\n', len(self.folded_data[:,self.remove_len1:-self.remove_len2][0])
                 self.folded_data = self.folded_data[:,self.remove_len1:-self.remove_len2]
-               # self.folded_data = self.folded_data[:,6500:12200]
 
             print '\nDATA ARE LEN:', len(self.data)
             print 'data loaded, update plot:',time.time()-self.t
@@ -138,6 +143,13 @@ class ytViewer(object):
             return True
         return False
 
+    def process_data(self,val):
+        """ Redress data in the space/ti;e diagram """
+        dd = self.folded_data.copy()
+        for i in range(0,self.folded_data.shape[0]):
+            dd[i,:] = roll(self.folded_data[i,:], int(i*val))
+        self.folded_data = dd
+        
     def update_cut(self):
         self.hline.set_ydata(self.folded_data[self.Y0,:])
 
@@ -314,6 +326,8 @@ if __name__=='__main__':
         chan= 'CHAN' + str(args[0])
     else:
         print "\nEnter ONLY one channel\n"
+    
+    print 'Displaying channel:',chan
     
     ### begin TV ###
     ytViewer(chan, host=IP, fold=options.prt, nmax=options.nmax)
