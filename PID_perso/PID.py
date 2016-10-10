@@ -15,15 +15,17 @@ if PLOT_ERROR:
     import gobject
     from matplotlib.pylab import *
     from matplotlib.widgets import Slider
+    matplotlib.pyplot.switch_backend('GTkagg')
 
 
 class PID_perso():
-        def __init__(self,query=None,command=None,setpoint=0.1):
+        def __init__(self,query=None,command=None,setpoint=0.2):
             
-            self.P = -0.1               # gain
-            self.I = 13  * 10**(3)      # 1/Ti
-            self.D = 0.1 * 10**(-5)     # Td
-            self.setpoint = setpoint    # setpoint in volts
+            self.P         = -0.1               # gain
+            self.I         = 13  * 10**(0)      # 1/Ti
+            self.D         = 0.1 * 10**(-5)     # Td
+            self.setpoint  = setpoint    # setpoint in volts
+            self.time_wait = 0.1
             
             self.previous_error = 0.
             self.integral = 0.
@@ -71,35 +73,49 @@ class PID_perso():
             print 'Communication okay'
             
             self.t  = time.time()
-            self.dt = 0.1
+            self.dt = 0.001
             
             if PLOT_ERROR:
                 ### Building list and figure ###
                 self.deque_error = deque(list(zeros(self.size_error)))
                 self.fig         = figure(31)
+                
+                key_connection   = self.fig.canvas.mpl_connect('key_press_event', self.keypress)
+                
                 self.ax          = self.fig.add_axes([0.1, 0.1, 0.8, 0.6], axisbg=COLOR)
                 self.line_error, = plot(self.deque_error)
+                ylim(-0.22,0.22)
                 
                 # Slider declarations
-                self.aP        = self.fig.add_axes([0.1, 0.7, 0.8, 0.08])
-                self.aP_slider = Slider(self.aP_sliderax,'$P$',-1,1,self.P,'%1.2f')
-                self.P_slider.on_changed(self.update_param)
-                self.aI         = self.fig.add_axes([0.1, 0.8, 0.8, 0.08])
-                self.aI_slider = Slider(self.aI_sliderax,'$I$',0,10**3,self.I,'%1.2f')
-                self.I_slider.on_changed(self.update_param)
-                self.aD         = self.fig.add_axes([0.1, 0.9, 0.8, 0.08])
-                self.aD_slider = Slider(self.aD_sliderax,'$D$',10**(-5),10**(-3),self.D,'%1.2f')
-                self.D_slider.on_changed(self.update_param)
+                self.aP        = self.fig.add_axes([0.1, 0.94, 0.8, 0.04])
+                self.aP_slider = Slider(self.aP,'$P$',0,0.5,self.P,'%1.5f')
+                self.aP_slider.on_changed(self.update_param)
+                self.aI         = self.fig.add_axes([0.1, 0.89, 0.8, 0.04])
+                self.aI_slider = Slider(self.aI,'$I$',0,50,self.I,'%1.5f')
+                self.aI_slider.on_changed(self.update_param)
+                self.aD         = self.fig.add_axes([0.1, 0.84, 0.8, 0.04])
+                self.aD_slider = Slider(self.aD,'$D$',0.,10**(-3),self.D,'%1.5f')
+                self.aD_slider.on_changed(self.update_param)
+                self.at         = self.fig.add_axes([0.1, 0.79, 0.8, 0.04])
+                self.at_slider = Slider(self.at,'$t$',10**(-3),1.,self.time_wait,'%1.5f')
+                self.at_slider.on_changed(self.update_param)
+                self.ass         = self.fig.add_axes([0.1, 0.74, 0.8, 0.04])
+                self.ass_slider = Slider(self.ass,'$setp mV$',0,300,self.setpoint*10**3,'%d')
+                self.ass_slider.on_changed(self.update_param)
                 
                 gobject.idle_add(self.PID_controller_GUI)
-            
+                
+                show()
+                
             else:
                 self.PID_controller()
             
-        def update_param(self):
-            self.P = round(self.P_slider.val,2)
-            self.I = round(self.I_slider.val,2)
-            self.D = round(self.D_slider.val,2)
+        def update_param(self,val):
+            self.P         = round(self.aP_slider.val,5)
+            self.I         = round(self.aI_slider.val,5)
+            self.D         = round(self.aD_slider.val,5)
+            self.time_wait = round(self.at_slider.val,5)
+            self.setpoint  = int(round(self.ass_slider.val,0))*10**(-3)
         
         def PID_controller(self):
             ### Controller function ###
@@ -113,7 +129,7 @@ class PID_perso():
                 error = self.setpoint - measured_value
                 self.integral = self.integral + error*self.dt
                 derivative = (error - self.previous_error)/self.dt
-                output = self.P*(error + self.I*self.integral + self.D*derivative)
+                output = self.P*error + self.I*self.integral + self.D*derivative
                 self.previous_error = error
                 
                 # Send the value to the function generator
@@ -130,12 +146,10 @@ class PID_perso():
                 # Get the current value
                 measured_value = self.get_value()
                 
-                print 'average voltage:',measured_value
-                
                 ## Core of the controller
                 error = self.setpoint - measured_value
-                self.integral = self.integral + error*self.dt
-                derivative = (error - self.previous_error)/self.dt
+                self.integral = self.integral + error*self.time_wait
+                derivative = (error - self.previous_error)/self.time_wait
                 output = self.P*(error + self.I*self.integral + self.D*derivative)
                 self.previous_error = error
                 
@@ -147,9 +161,11 @@ class PID_perso():
                 # Send the value to the function generator
                 self.send_computed_value(output)
                 
-                self.dt = time.time() - self.t
-                self.t  = time.time()
-                print self.dt
+                while (time.time() - self.t) < self.time_wait:
+                    time.sleep(0)
+                else:
+                    print 'average voltage:',measured_value,'      dt:',time.time()-self.t
+                    self.t = time.time() 
                 
                 draw()
                 return True
@@ -157,10 +173,13 @@ class PID_perso():
             
             
         def send_computed_value(self,offset):
-            offset = offset - 0.005                      # arbitrary waveform with -5mV DC and 10mV amp
-            print 'OFFSET APLLIED:',offset
+            #offset = offset - 0.005                      # arbitrary waveform with -5mV DC and 10mV amp
+            #print 'OFFSET APLLIED:',offset
             if abs(offset)>=5.:
-                self.exit()
+                self.agilent.write('VOLT:OFFS '+str(-0.005))
+                self.previous_error = 0.
+                self.integral = 0.
+                #self.exit()
             else:    
                 self.agilent.write('VOLT:OFFS '+str(offset))
  
@@ -174,7 +193,17 @@ class PID_perso():
             self.scope.write(':WAV:DATA?')
             return mean(eval(self.scope.read_raw()))    #mean(fromstring(self.scope.read_raw()[10:],dtype=int8))
             
-                
+        def keypress(self, event):
+            if event.key == 'q':                # quit
+                del event
+                self.agilent.write('VOLT:OFFS '+str(-0.005))
+                sys.exit()
+            #elif event.key == ' ':                # pause
+                #self.toggle_update()
+                #del event
+            else: 
+                print("key ", event.key, " is not known")
+        
         def exit(self):
             sys.exit()         # to set offset to 0 for disconnecting
             
@@ -192,7 +221,7 @@ if __name__ == '__main__':
     parser = OptionParser(usage)
     parser.add_option("-c", "--command", type="str", dest="com", default=None, help="Set the command to use." )
     parser.add_option("-q", "--query", type="str", dest="que", default=None, help="Set the query to use." )
-    parser.add_option("-s", "--setpoint", type="float", dest="setpoint", default=0.1, help="Set the setpoint" )
+    parser.add_option("-s", "--setpoint", type="float", dest="setpoint", default=0.2, help="Set the setpoint" )
     (options, args) = parser.parse_args()
     
     ### Start the talker ###
