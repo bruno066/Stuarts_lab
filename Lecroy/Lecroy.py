@@ -5,18 +5,21 @@ from optparse import OptionParser
 import sys
 import commands as C
 import time
+from numpy import fromstring,int8,int16
 
 IP = '169.254.166.206'
 
 class Lecroy():
-        def __init__(self,channel=None,filename=None,query=None,command=None,FORCE=False,PRINT=False):
+        def __init__(self,channel=None,encoding='BYTE',spe_mode=None,filename=None,query=None,command=None,FORCE=False,PRINT=False):
+            if encoding=='BYTE':dtype=int8
+            elif encoding=='WORD':dtype=int16
             
             ### Initiate communication ###
             self.command = command
             self.scope = v.Instrument(IP)
             
             ### Format of answers ###
-            self.scope.write('CFMT DEF9,BYTE,BIN')
+            self.scope.write('CFMT DEF9,'+encoding+',BIN')
             self.scope.write('CHDR SHORT')
             
             if query:
@@ -39,8 +42,6 @@ class Lecroy():
                 while self.query('TRMD?') != 'TRMD STOP':
                     time.sleep(0.05)
                     pass
-                else:
-                    print '\nStart acquisition ...'
                     
                 ### Check if channels are active ###
                 for i in range(len(channel)):
@@ -50,6 +51,11 @@ class Lecroy():
                         sys.exit()
                 ### Acquire and save datas ###
                 for i in range(len(channel)):
+                    ### Allow auto scaling the channel gain ###
+                    if spe_mode:
+                        data = fromstring(self.get_data(chan=channel[i],filename=filename,SAVE=False,RET=True),dtype)
+                        print 'special mode', data.max(),data.min()
+
                     print 'trying to get channel',channel[i]
                     self.get_data(chan=channel[i],filename=filename,SAVE=True,FORCE=FORCE)
             else:
@@ -59,14 +65,14 @@ class Lecroy():
             self.run()
             
         
-        def query(self, cmd, nbytes=1024):
+        def query(self, cmd, nbytes=1000000):
             """Send command 'cmd' and read 'nbytes' bytes as answer."""
             self.scope.write(cmd)
             r = self.scope.read(nbytes)
             return r
         
 
-        def get_data(self,chan='C1',filename='test_save_file_',PLOT=False,SAVE=False,LOG=True,FORCE=False):
+        def get_data(self,chan='C1',filename='test_save_file_',PLOT=False,SAVE=False,LOG=True,FORCE=False,RET=False):
             self.data = self.query_data(chan)
             print len(self.data)
             ### TO SAVE ###
@@ -88,7 +94,8 @@ class Lecroy():
                     f.write(self.preamb)
                     f.close()
                 print  chan + ' saved'
-        
+            if RET:
+                return self.data
         
         def get_log_data(self,chan):
             rep = self.query(chan+":INSP? 'WAVEDESC'")
@@ -123,6 +130,8 @@ if __name__ == '__main__':
     parser.add_option("-q", "--query", type="str", dest="que", default=None, help="Set the query to use." )
     parser.add_option("-o", "--filename", type="string", dest="filename", default=None, help="Set the name of the output file" )
     parser.add_option("-F", "--force", type="string", dest="force", default=None, help="Allows overwriting file" )
+    parser.add_option("-e", "--encoding", type="string", dest="encoding", default='BYTE', help="For mofifying the encoding format of the answer" )
+    parser.add_option("-m", "--spe_mode", type="string", dest="spe_mode", default=None, help="For allowing auto modification of the vertical gain" )
     (options, args) = parser.parse_args()
     
     ### Compute channels to acquire ###
@@ -141,5 +150,5 @@ if __name__ == '__main__':
     print 'Channel(s):   ', chan
     
     ### Start the talker ###
-    Lecroy(channel=chan,query=options.que,command=options.com,filename=options.filename,FORCE=options.force)
+    Lecroy(channel=chan,encoding=options.encoding,spe_mode=options.spe_mode,query=options.que,command=options.com,filename=options.filename,FORCE=options.force)
     
