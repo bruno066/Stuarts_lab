@@ -10,30 +10,29 @@ from matplotlib.pyplot import plot,draw,show
 PORT = '5'
 
 class TGA_12104():
-        def __init__(self,query=None,command=None,kar=None,auto_lock=None,lock=None,unlock=None):
+        def __init__(self,query=None,command=None,kar=None,auto_lock=None,lock=None,unlock=None,PLOT=False):
             self.command = None
-            
-            ### PID part ###
-            rm = v.ResourceManager('@py')
             
             ### agilent part ###
             rm = v.ResourceManager('@py')
-            self.inst = rm.get_instrument('TCPIP::169.254.2.20::INSTR')
+            try:
+                self.inst = rm.get_instrument('TCPIP::169.254.2.20::INSTR')
+            except:
+                print 'no instruments connected'
             
             ramp = 4000
-            self.inst.write('VOLT '+str(0.3))
             
-            self.inst.write('FREQ '+str(5))
+            try:
+                self.inst.write('VOLT '+str(0.3))
+                self.inst.write('FREQ '+str(5))
+            except:
+                pass
             
-            l   = list(zeros(2000) - 1)
-            lll = list(ones(7000))
-            ll  = list(linspace(-1,1,100+ramp))
-
-            square_test1 = zeros(300)
-            square_test2 = ones(300)
+            l = self.new_ramp_step(ramp)
             
-            #l.extend(square_test1);l.extend(square_test2);l.extend(square_test1);l.extend(square_test2);l.extend(square_test1);l.extend(square_test2)
-            l.extend(ll);l.extend(lll)
+            if PLOT:
+                plot(l[1:-1])
+                return
             
             s = str(l)[1:-1]
             self.inst.write('DATA VOLATILE,'+s)
@@ -43,6 +42,21 @@ class TGA_12104():
     
             ### Exit ###
             self.exit()
+            
+        def ramp_step(self,ramp):
+            l   = list(zeros(2000) - 1)
+            lll = list(ones(7000))
+            ll  = list(linspace(-1,1,100+ramp))
+            l.extend(ll);l.extend(lll);l.extend(l4)
+            return l
+        
+        def new_ramp_step(self,ramp):
+            l   = list(zeros(2000) - 1)
+            lll = list(ones(7000))
+            ll  = list(linspace(-1,1,100+ramp))
+            l4  = list(linspace(1,-1,ramp/3))
+            l.extend(ll);l.extend(lll);l.extend(l4)
+            return l
             
         def process(self):
             t = time.time()
