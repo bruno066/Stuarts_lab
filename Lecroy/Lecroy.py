@@ -11,8 +11,8 @@ IP = '169.254.166.206'
 
 class Lecroy():
         def __init__(self,channel=None,encoding='BYTE',spe_mode=None,filename=None,query=None,command=None,FORCE=False,PRINT=False):
-            if encoding=='BYTE':dtype=int8
-            elif encoding=='WORD':dtype=int16
+            if encoding=='BYTE':dtype=int8;LIM=230.        # 10% less than the maximal number possible
+            elif encoding=='WORD':dtype=int16;LIM=58900.   # 10% less than the maximal number possible
             
             ### Initiate communication ###
             self.command = command
@@ -55,6 +55,18 @@ class Lecroy():
                     if spe_mode:
                         data = fromstring(self.get_data(chan=channel[i],filename=filename,SAVE=False,RET=True),dtype)
                         print 'special mode', data.max(),data.min()
+                        diff = abs(data.max())+abs(data.min())
+                        if diff<LIM:
+                            prev_channel_amp = self.query('C1:VDIV?')
+                            print prev_channel_amp
+                            new_channel_amp  = (prev_channel_amp*diff)/LIM
+                            print new_channel_amp
+                            if new_channel_amp<0.005:        # if lower than the lowest possible 5mV/div
+                                pass
+                            else:
+                                pass
+                                
+                    ############################################
 
                     print 'trying to get channel',channel[i]
                     self.get_data(chan=channel[i],filename=filename,SAVE=True,FORCE=FORCE)
