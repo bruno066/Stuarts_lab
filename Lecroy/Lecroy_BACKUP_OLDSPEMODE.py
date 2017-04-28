@@ -53,50 +53,51 @@ class Lecroy():
                 for i in range(len(channel)):
                     ### Allow auto scaling the channel gain and offset ###
                     if spe_mode:
-                        stri = self.query('C3:PAVA? MIN,MAX')
-                        temp2 = 'MIN,'
-                        temp3 = stri.find(temp2)
-                        temp4 = stri.find(' V')
-                        mi    = eval(stri[temp3+len(temp2):temp4])
-                        stri = stri[temp4+len(' V'):]
-                        
-                        temp2 = 'MAX,'
-                        temp3 = stri.find(temp2)
-                        temp4 = stri.find(' V')
-                        ma    = eval(stri[temp3+len(temp2):temp4])
-                        diff = abs(mi) + abs(ma)
-                        print 'prev_amp:  ',diff
-                        
-                        temp2  = channel[i]+':VDIV'
-                        temp2_o  = channel[i]+':OFST'
-                        
-                        #print 'MIN,MAX:   ',mi,ma
-
-                        ### To modify offset ###
-                        try:
-                            val = (-1)*diff/2. + abs(mi)
-                            val = round(val,3)
-                            print val
-                            self.scope.write(temp2_o+' '+str(val))
-                        except:
-                            pass
-                        ########################
-                        
-                        ### To modify amplitude ###
-                        FACT = 10.
-                        new_channel_amp  = round(diff/FACT,3)
-                        print 'after_chan_amp:  ',new_channel_amp,'\n'
-                        if new_channel_amp<0.005:        # if lower than the lowest possible 5mV/div
-                            pass
-                        else:
-                            self.scope.write(temp2+' '+str(new_channel_amp))
-                        ########################
-                        
-                        self.single()
-                        while self.query('TRMD?') != 'TRMD STOP':
-                            time.sleep(0.05)
-                            pass
-                        ### END of spe_mode #################################
+                        data  = fromstring(self.get_data(chan=channel[i],filename=filename,SAVE=False,RET=True),dtype)
+                        mi,ma = int(data.min().astype(float64)),int(data.max().astype(float64))
+                        diff = abs(mi)+abs(ma)
+                        print 'prev_diff:  ',diff
+                        if diff<LIM or abs(mi)>(LIM/2) or abs(ma)>(LIM/2):
+                            temp2  = channel[i]+':VDIV'
+                            temp3  = self.query(temp2+'?')
+                            temp4 = temp3[(temp3.find(temp2+' ')+len(temp2+' ')):]
+                            prev_channel_amp = eval(temp4[:temp4.find('V')])
+                            print 'prev_amp:  ',prev_channel_amp
+                            
+                            temp2_o  = channel[i]+':OFST'
+                            temp3_o  = self.query(temp2_o+'?')
+                            temp4_o = temp3_o[(temp3_o.find(temp2_o+' ')+len(temp2_o+' ')):]
+                            prev_channel_offset = eval(temp4_o[:temp4_o.find('V')])
+                            prev_channel_offset_point =  int(prev_channel_offset*NUM/(10*prev_channel_amp))
+                            print 'prev_OFF:   ',prev_channel_offset_point
+                            
+                            diff2 = abs(ma)-abs(mi)
+                            if sign(ma*mi)==-1:
+                                val = (-1)*diff/2 + prev_channel_offset_point+abs(mi) 
+                            elif sign(ma*mi)==1 and ma<0:
+                                val = abs(diff2/2) + prev_channel_offset_point+abs(ma)+1
+                            elif sign(ma*mi)==1 and ma>0:
+                                val = (-1)*diff2/2 + prev_channel_offset_point-mi-1
+                            else:
+                                pass          # pass si mi == ma
+                            
+                            try:
+                                val = round((val*10*prev_channel_amp)/float(LIM),3)
+                                self.scope.write(temp2_o+' '+str(val))
+                            except:
+                                pass
+                            
+                            new_channel_amp  = round((prev_channel_amp*diff)/LIM,3)
+                            print 'after_chan_amp:  ',new_channel_amp,'\n'
+                            if new_channel_amp<0.005:        # if lower than the lowest possible 5mV/div
+                                pass
+                            else:
+                                self.scope.write(temp2+' '+str(new_channel_amp))
+                    self.single()
+                    while self.query('TRMD?') != 'TRMD STOP':
+                        time.sleep(0.05)
+                        pass
+                    ############################################
 
                     print 'trying to get channel',channel[i]
                     self.get_data(chan=channel[i],filename=filename,SAVE=True,FORCE=FORCE)
