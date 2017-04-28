@@ -53,49 +53,42 @@ class Lecroy():
                 for i in range(len(channel)):
                     ### Allow auto scaling the channel gain and offset ###
                     if spe_mode:
-                        stri = self.query('C3:PAVA? MIN,MAX')
-                        temp2 = 'MIN,'
-                        temp3 = stri.find(temp2)
-                        temp4 = stri.find(' V')
-                        mi    = eval(stri[temp3+len(temp2):temp4])
-                        stri = stri[temp4+len(' V'):]
-                        
-                        temp2 = 'MAX,'
-                        temp3 = stri.find(temp2)
-                        temp4 = stri.find(' V')
-                        ma    = eval(stri[temp3+len(temp2):temp4])
-                        diff = abs(mi) + abs(ma)
-                        print 'prev_amp:  ',diff
-                        
-                        temp2  = channel[i]+':VDIV'
-                        temp2_o  = channel[i]+':OFST'
-                        
-                        #print 'MIN,MAX:   ',mi,ma
-
-                        ### To modify offset ###
-                        try:
-                            val = (-1)*diff/2. + abs(mi)
-                            val = round(val,3)
-                            print val
-                            self.scope.write(temp2_o+' '+str(val))
-                        except:
-                            pass
-                        ########################
-                        
-                        ### To modify amplitude ###
-                        FACT = 10.
-                        new_channel_amp  = round(diff/FACT,3)
-                        print 'after_chan_amp:  ',new_channel_amp,'\n'
-                        if new_channel_amp<0.005:        # if lower than the lowest possible 5mV/div
-                            pass
-                        else:
-                            self.scope.write(temp2+' '+str(new_channel_amp))
-                        ########################
-                        
-                        self.single()
-                        while self.query('TRMD?') != 'TRMD STOP':
-                            time.sleep(0.05)
-                            pass
+                        for k in range(eval(spe_mode)):
+                            stri = self.query('C3:PAVA? MIN,MAX')
+                            temp2 = 'MIN,'
+                            temp3 = stri.find(temp2)
+                            temp4 = stri.find(' V')
+                            mi    = eval(stri[temp3+len(temp2):temp4])
+                            stri = stri[temp4+len(' V'):]
+                            temp2 = 'MAX,'
+                            temp3 = stri.find(temp2)
+                            temp4 = stri.find(' V')
+                            ma    = eval(stri[temp3+len(temp2):temp4])
+                            diff = abs(mi) + abs(ma)
+                            #print 'prev_amp:  ',diff
+                            temp2  = channel[i]+':VDIV'
+                            temp2_o  = channel[i]+':OFST'
+                            #print 'MIN,MAX:   ',mi,ma
+                            ### To modify offset ###
+                            try:
+                                val = round((-1)*diff/2. + abs(mi),3)
+                                self.scope.write(temp2_o+' '+str(val))
+                            except:
+                                pass
+                            ########################
+                            ### To modify amplitude ###
+                            FACT = 9.5
+                            new_channel_amp  = round(diff/FACT,3)
+                            #print 'after_chan_amp:  ',new_channel_amp,'\n'
+                            if new_channel_amp<0.005:        # if lower than the lowest possible 5mV/div
+                                pass
+                            else:
+                                self.scope.write(temp2+' '+str(new_channel_amp))
+                            ########################
+                            self.single()
+                            while self.query('TRMD?') != 'TRMD STOP':
+                                time.sleep(0.05)
+                                pass
                         ### END of spe_mode #################################
 
                     print 'trying to get channel',channel[i]
