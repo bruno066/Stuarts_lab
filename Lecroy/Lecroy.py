@@ -77,13 +77,12 @@ class Lecroy():
                                 pass
                             ########################
                             ### To modify amplitude ###
-                            FACT = 9.5
+                            FACT = 6
                             new_channel_amp  = round(diff/FACT,3)
                             #print 'after_chan_amp:  ',new_channel_amp,'\n'
                             if new_channel_amp<0.005:        # if lower than the lowest possible 5mV/div
-                                pass
-                            else:
-                                self.scope.write(temp2+' '+str(new_channel_amp))
+                                new_channel_amp = 0.005
+                            self.scope.write(temp2+' '+str(new_channel_amp))
                             ########################
                             self.single()
                             while self.query('TRMD?') != 'TRMD STOP':
