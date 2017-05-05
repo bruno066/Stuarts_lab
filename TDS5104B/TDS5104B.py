@@ -1,29 +1,18 @@
 #!/usr/bin/env python
-import socket
+import vxi11 as v
 import sys
 import time
 from optparse import OptionParser
 import commands as C
 from numpy import savetxt
 
-HOSTNAME="169.254.166.207"
+IP="169.254.108.199"
 
-class Yokogawa():
-    def __init__(self, filename=None,query=None,command=None,FORCE=False,SAVE=True):
+class TDS5104B():
+    def __init__(self,channel=None, filename=None,query=None,command=None,FORCE=False,SAVE=True):
         ### Establish the connection ###
-        self.sock=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect((HOSTNAME, 10001))
-        self.send('OPEN "anonymous"')
-        ans = self.recv(1024)
-
-        if not ans=='AUTHENTICATE CRAM-MD5.':
-            print "problem with authentication"
-            sys.exit(1)
-        self.send(" ")
-        ans = self.recv(1024)
-        if not ans=='ready':
-            print "problem with authentication"
-            sys.exit(1)
+        self.command = None
+        self.scope = v.Instrument(IP)
 
         if query:
             self.command = query
@@ -37,55 +26,53 @@ class Yokogawa():
             self.scope.write(self.command)
             print '\n'
             sys.exit()
-
+            
+        self.scope.write('FPAnel:PRESS RUnstop')
+        
         if filename:
-            self.lambd,self.amp = self.get_data()
-            self.lambd = [eval(self.lambd[i]) for i in range(len(self.lambd))]
-            self.amp = [eval(self.amp[i]) for i in range(len(self.amp))]
-            ### TO SAVE ###
-            if SAVE:
-                temp_filename = filename + '_YOKO'
-                temp = C.getoutput('ls').splitlines()                           # if file exist => exit
-                for i in range(len(temp)):
-                    if temp[i] == temp_filename and not(FORCE):
-                        print '\nFile ', temp_filename, ' already exists, change filename, remove old file or use -F option to overwrite\n'
-                        sys.exit()
-
-                savetxt(temp_filename,(self.lambd,self.amp))
-
+            for i in range(len(channel)):
+                self.get_data(chan=channel[i],filename=filename,SAVE=True)
+        else:
+            print 'If you want to save, provide an output file name'
                 
-    def get_data(self):
-        X = self.query(":TRAC:DATA:X? TRA", length=100000).split(',')
-        data = self.query(":TRAC:DATA:Y? TRA", length=100000).split(',')
-        return X,data
+        self.scope.write('FPAnel:PRESS RUnstop')
 
-    def send(self, msg):
-        msg=msg+"\n"
-        self.sock.send(msg)
+    def get_data(self,chan='CH1',filename='test_save_file_',PLOT=False,SAVE=False,LOG=True):
+        self.scope.write('DAT:ENC FAS')
+        #self.scope.write('WFMO:BYT_Nr 1')
+        self.scope.write('CURV?')
+        self.data = self.scope.read_raw()
+        
+        self.data = self.data[:-1]     # to remove last shitty point
 
-    def recv(self, length=2048):
-        msg=''
-        while not msg.endswith('\r\n'):
-            msg=msg+self.sock.recv(length)
-        msg = msg[:-2]
-        return msg
+        ### TO SAVE ###
+        if SAVE:
+            temp = C.getoutput('ls').splitlines()                           # if file exist => exit
+            for i in range(len(temp)):
+                temp_filename = filename + '_TDS5104B' + chan
+                if temp[i] == temp_filename:
+                    print '\nFile ', temp_filename, ' already exists, change filename or remove old file\n'
+                    sys.exit()
+            
+            f = open(filename + '_TDS5104B' + chan,'w')                   # Save data
+            f.write(self.data)
+            f.close()
+            if LOG:
+                self.preamb = self.get_log_data()             # Save scope configuration
+                f = open(filename + '_TDS5104B' + chan + '.log','w')
+                f.write(self.preamb)
+                f.close()
+            print  chan + ' saved'
+    
+    def get_log_data(self):
+        self.scope.write('WFMO?')
+        return self.scope.read()          
 
-    def query(self,msg,length=2048):
-        """Sends question and returns answer"""
-        self.send(msg)
-        time.sleep(1)
-        return(self.recv(length))
-
-    def makesweep(self):
-        """Trigger a single sweep"""
-        self.mode('1')
-        self.send('INIT')
-
-    def mode(self,mode=None):
-        """Sets or queries mode. Returns mode in any case"""
-        if mode is not None:
-            self.send('INIT:SMOD '+mode)
-        return self.query('INIT:SMOD?')
+    def query(self, cmd, nbytes=1000000):
+        """Send command 'cmd' and read 'nbytes' bytes as answer."""
+        self.scope.write(cmd)
+        r = self.scope.read(nbytes)
+        return r
 
 
 if __name__=="__main__":
@@ -93,7 +80,7 @@ if __name__=="__main__":
     usage = """usage: %prog [options] arg
 
                EXAMPLES:
-                   get_YOKO -o filename
+                   get_TDS5104B -o filename
                Record the spectrum and create one file with two columns lambda,spectral amplitude
 
                """
@@ -104,6 +91,19 @@ if __name__=="__main__":
     parser.add_option("-F", "--force", type="string", dest="force", default=None, help="Allows overwriting file" )
     (options, args) = parser.parse_args()
 
+    if (len(args) == 0) and (options.com is None) and (options.que is None):
+        print '\nYou must provide at least one channel\n'
+        sys.exit()
+    elif len(args) == 1:
+        chan = []
+        temp_chan = args[0].split(',')                  # Is there a coma?
+        for i in range(len(temp_chan)):
+            chan.append('CH' + temp_chan[i])
+    else:
+        chan = []
+        for i in range(len(args)):
+            chan.append('CH' + str(args[i]))
+    print chan
     
-    Yokogawa(query=options.que,command=options.com,filename=options.filename,FORCE=options.force)
+    TDS5104B(channel=chan,query=options.que,command=options.com,filename=options.filename,FORCE=options.force)
 
