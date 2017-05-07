@@ -28,7 +28,11 @@ class TDS5104B():
             sys.exit()
             
         self.scope.write('FPAnel:PRESS RUnstop')
-        
+        self.scope.write('HORizontal:RECOrdlength?')
+        length = self.scope.read()
+        self.scope.write('DAT:STAR 1')
+        self.scope.write('DAT:STOP '+str(length))
+            
         if filename:
             for i in range(len(channel)):
                 self.get_data(chan=channel[i],filename=filename,SAVE=True)
@@ -39,11 +43,12 @@ class TDS5104B():
 
     def get_data(self,chan='CH1',filename='test_save_file_',PLOT=False,SAVE=False,LOG=True):
         self.scope.write('DAT:ENC FAS')
-        #self.scope.write('WFMO:BYT_Nr 1')
+        self.scope.write('DAT:SOU '+chan)
+        self.scope.write('WFMO:BYT_Nr 1')
         self.scope.write('CURV?')
         self.data = self.scope.read_raw()
         
-        self.data = self.data[:-1]     # to remove last shitty point
+        self.data = self.data[7:-1]     # to remove last shitty point
 
         ### TO SAVE ###
         if SAVE:
@@ -77,12 +82,25 @@ class TDS5104B():
 
 if __name__=="__main__":
     
-    usage = """usage: %prog [options] arg
+     usage = """usage: %prog [options] arg
 
-               EXAMPLES:
-                   get_TDS5104B -o filename
-               Record the spectrum and create one file with two columns lambda,spectral amplitude
+                EXAMPLES:
+                    get_TDS5104B -o filename
+                Record the spectrum and create one file with two columns lambda,spectral amplitude
 
+                Datas are recorded in int8 format
+               
+                Headers contains:
+                WFMOUTPRE? ? might return the waveform formatting data as:
+                :WFMOUTPRE:BYT_NR 2;BIT_NR 16;ENCDG ASCII;BN_FMT RI;BYT_OR
+                MSB;WFID “Ch1, DC coupling, 100.0mV/div, 4.000us/div, 10000
+                points, Sample mode”;NR_PT 10000;PT_FMT Y;XUNIT “s”;XINCR
+                4.0000E-9;XZERO - 20.0000E-6;PT_OFF 0;YUNIT “V”;YMULT
+                15.6250E-6;YOFF :”6.4000E+3;YZERO 0.0000
+               
+               To retrieve real value:
+               value_in_units = ((curve_in_dl - YOFf_in_dl) * YMUlt) + YZEro_in_units
+               
                """
     parser = OptionParser(usage)
     parser.add_option("-c", "--command", type="str", dest="com", default=None, help="Set the command to use." )
