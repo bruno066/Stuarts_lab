@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import vxi11 as v
 import sys
 import time
@@ -35,6 +37,7 @@ class TDS5104B():
             
         if filename:
             for i in range(len(channel)):
+                time.sleep(1)
                 self.get_data(chan=channel[i],filename=filename,SAVE=True)
         else:
             print 'If you want to save, provide an output file name'
@@ -81,8 +84,8 @@ class TDS5104B():
 
 
 if __name__=="__main__":
-    
-     usage = """usage: %prog [options] arg
+
+    usage = """usage: %prog [options] arg
 
                 EXAMPLES:
                     get_TDS5104B -o filename
@@ -91,11 +94,10 @@ if __name__=="__main__":
                 Datas are recorded in int8 format
                
                 Headers contains:
-                WFMOUTPRE? ? might return the waveform formatting data as:
                 :WFMOUTPRE:BYT_NR 2;BIT_NR 16;ENCDG ASCII;BN_FMT RI;BYT_OR
-                MSB;WFID “Ch1, DC coupling, 100.0mV/div, 4.000us/div, 10000
-                points, Sample mode”;NR_PT 10000;PT_FMT Y;XUNIT “s”;XINCR
-                4.0000E-9;XZERO - 20.0000E-6;PT_OFF 0;YUNIT “V”;YMULT
+                MSB;WFID 'Ch1, DC coupling, 100.0mV/div, 4.000us/div, 10000
+                points, Sample mode';NR_PT 10000;PT_FMT Y;XUNIT 's';XINCR
+                4.0000E-9;XZERO - 20.0000E-6;PT_OFF 0;YUNIT 'V';YMULT
                 15.6250E-6;YOFF :”6.4000E+3;YZERO 0.0000
                
                To retrieve real value:
