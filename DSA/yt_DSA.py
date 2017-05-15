@@ -21,7 +21,7 @@ plt.style.use('classic')
 mpl.pyplot.switch_backend('GTkAgg')
 
 class ytViewer(object):
-    def __init__(self, filename, fold=19277, nmax=100,NORM=True,dtype=int8,DEB=0):
+    def __init__(self, filename, fold=19277, nmax=100,NORM=True,dtype=int8,DEB=0,shear_val=0.):
         self.UPDATE = True
         self.color  = True
         
@@ -30,7 +30,7 @@ class ytViewer(object):
         self.fold      = fold
         self.increment = 5
         self.index     = 0
-        self.shear_val = 0.
+        self.shear_val = shear_val
         
         self.remove_len1 = 0
         self.remove_len2 = 1
@@ -92,6 +92,7 @@ class ytViewer(object):
         self.plot_circle(0,0,2,fc='#00FF7F')
         mpl.pyplot.axis('off')
         
+        if self.shear_val!=0.: self.shear()
         gobject.idle_add(self.update_plot)
         show()
     
@@ -209,8 +210,8 @@ if __name__=='__main__':
     usage = """usage: %prog [options] arg
                
                EXAMPLES:
-                   yt_DSA -f 1000 -n 2000 1
-               Show the interactive space/time diagram for 1000pts folding and 2000 rt
+                   ytExp_DSA -f 1000 -n 2000 1
+               Show the interactive space/time diagram for 1000pts folding and 2000 rt acquired from the first channel
 
 
                """
@@ -218,6 +219,7 @@ if __name__=='__main__':
     parser.add_option("-f", "--fold", type="int", dest="prt", default=364, help="Set the value to fold for yt diagram." )
     parser.add_option("-n", "--nmax", type="int", dest="nmax", default=560, help="Set the value to the number of roundtrip to plot." )
     parser.add_option("-d", "--deb", type="int", dest="deb", default=0, help="Change the beginning of data." )
+    parser.add_option("-s", "--shear", type="float", dest="shear", default=0., help="Set initial value of the shear." )
     (options, args) = parser.parse_args()
 
     if len(args) == 0:
@@ -228,7 +230,7 @@ if __name__=='__main__':
         print "\nEnter ONLY one filename\n"
     
     ### begin TV ###
-    ytViewer(filename, fold=options.prt, nmax=options.nmax,DEB=options.deb)
+    ytViewer(filename, fold=options.prt, nmax=options.nmax,DEB=options.deb,shear_val=options.shear)
       
 #        ytExplorer(filename=sys.argv[1], rt=int(sys.argv[2]))
 

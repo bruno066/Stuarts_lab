@@ -10,11 +10,9 @@ from numpy import fromstring,int8,int16,float64,sign
 IP = '169.254.166.206'
 
 class Lecroy():
-        def __init__(self,channel=None,encoding='BYTE',spe_mode=None,filename=None, spe_fact=None,query=None,command=None,FORCE=False,PRINT=False):
+        def __init__(self,channel=None,encoding='BYTE',spe_mode=None,filename=None, FACT=6.,query=None,command=None,FORCE=False,PRINT=False):
             if encoding=='BYTE':dtype=int8;NUM=256;LIM=217.          # 15% less than the maximal number possible
             elif encoding=='WORD':dtype=int16;NUM=65536;LIM=55700.   # 15% less than the maximal number possible
-            if spe_fact: FACT=eval(spe_fact); 
-            else: FACT=6
             
             ### Initiate communication ###
             self.command = command
@@ -190,7 +188,7 @@ if __name__ == '__main__':
     parser.add_option("-F", "--force", type="string", dest="force", default=None, help="Allows overwriting file" )
     parser.add_option("-e", "--encoding", type="string", dest="encoding", default='BYTE', help="For mofifying the encoding format of the answer" )
     parser.add_option("-m", "--spe_mode", type="string", dest="spe_mode", default=None, help="For allowing auto modification of the vertical gain" )
-    parser.add_option("-n", "--spe_fact", type="string", dest="spe_fact", default=None, help="For setting limits of the vertical gain, units are in number of scope division" )
+    parser.add_option("-n", "--spe_fact", type="float", dest="spe_fact", default=6., help="For setting limits of the vertical gain, units are in number of scope division" )
     (options, args) = parser.parse_args()
     
     ### Compute channels to acquire ###
@@ -210,5 +208,5 @@ if __name__ == '__main__':
     ####################################
     
     ### Start the talker ###
-    Lecroy(channel=chan,encoding=options.encoding,spe_mode=options.spe_mode,query=options.que,command=options.com,filename=options.filename,FORCE=options.force,spe_fact=options.spe_fact)
+    Lecroy(channel=chan,encoding=options.encoding,spe_mode=options.spe_mode,query=options.que,command=options.com,filename=options.filename,FORCE=options.force,FACT=options.spe_fact)
     
