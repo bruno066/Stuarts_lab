@@ -10,9 +10,11 @@ from numpy import fromstring,int8,int16,float64,sign
 IP = '169.254.166.206'
 
 class Lecroy():
-        def __init__(self,channel=None,encoding='BYTE',spe_mode=None,filename=None,query=None,command=None,FORCE=False,PRINT=False):
+        def __init__(self,channel=None,encoding='BYTE',spe_mode=None,filename=None, spe_fact=None,query=None,command=None,FORCE=False,PRINT=False):
             if encoding=='BYTE':dtype=int8;NUM=256;LIM=217.          # 15% less than the maximal number possible
             elif encoding=='WORD':dtype=int16;NUM=65536;LIM=55700.   # 15% less than the maximal number possible
+            if spe_fact: FACT=eval(spe_fact); 
+            else: FACT=6
             
             ### Initiate communication ###
             self.command = command
@@ -55,7 +57,7 @@ class Lecroy():
                     k = 1
                     if spe_mode:
                         while k <= eval(spe_mode):
-                            stri = self.query('C3:PAVA? MIN,MAX')
+                            stri = self.query(channel[i]+':PAVA? MIN,MAX')
                             temp2 = 'MIN,'
                             temp3 = stri.find(temp2)
                             temp4 = stri.find(' V')
@@ -78,7 +80,6 @@ class Lecroy():
                                 pass
                             ########################
                             ### To modify amplitude ###
-                            FACT = 6
                             new_channel_amp  = round(diff/FACT,3)
                             
                             #temp2  = channel[i]+':VDIV'
@@ -189,6 +190,7 @@ if __name__ == '__main__':
     parser.add_option("-F", "--force", type="string", dest="force", default=None, help="Allows overwriting file" )
     parser.add_option("-e", "--encoding", type="string", dest="encoding", default='BYTE', help="For mofifying the encoding format of the answer" )
     parser.add_option("-m", "--spe_mode", type="string", dest="spe_mode", default=None, help="For allowing auto modification of the vertical gain" )
+    parser.add_option("-n", "--spe_fact", type="string", dest="spe_fact", default=None, help="For setting limits of the vertical gain, units are in number of scope division" )
     (options, args) = parser.parse_args()
     
     ### Compute channels to acquire ###
@@ -205,7 +207,8 @@ if __name__ == '__main__':
         for i in range(len(args)):
             chan.append('C' + str(args[i]))
     print 'Channel(s):   ', chan
+    ####################################
     
     ### Start the talker ###
-    Lecroy(channel=chan,encoding=options.encoding,spe_mode=options.spe_mode,query=options.que,command=options.com,filename=options.filename,FORCE=options.force)
+    Lecroy(channel=chan,encoding=options.encoding,spe_mode=options.spe_mode,query=options.que,command=options.com,filename=options.filename,FORCE=options.force,spe_fact=options.spe_fact)
     
