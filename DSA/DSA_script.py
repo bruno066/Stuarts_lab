@@ -183,21 +183,27 @@ if __name__ == "__main__":
     
     usage = """usage: %prog [options] arg
                
-EXAMPLES:
-
-    getDSA -o my_output_file 1
-    results in two saved files, the data and the scope parameters, called respectively my_output_file_DSACHAN1 and my_output_file_DSACHAN1.log
+    EXAMPLES:
+    get_DSA -o my_output_file 1
+    result in saving two files for the temporal trace of channel 1, the data and the scope parameters, called respectively my_output_file_DSACHAN1 and my_output_file_DSACHAN1.log
     
-    getDSA -o my_output_file 1
-    Same as previous one but with 4 output files, two for each pannel
-                   
+    get_DSA -o my_output_file 1,2
+    Same as previous one but with 4 output files, two for each channel (1 and 2)
+    
+    
+    IMPORTANT INFORMATIONS:
+    - Datas are obtained in a binary format: int8 
+    - Header is composed as follow:
+    <format>, <type>, <points>, <count> , <X increment>, <X origin>, < X reference>, <Y increment>, <Y origin>, <Y reference>, <coupling>, <X display range>, <X display origin>, <Y display range>, <Y display origin>, <date>,
+    <time>, <frame model #>, <acquisition mode>, <completion>, <X units>, <Y units>, <max bandwidth limit>, <min bandwidth limit>    
+    - To retrieve datas (in "Units")
+    Y-axis Units = data value * Yincrement + Yorigin (analog channels) 
+    X-axis Units = data index * Xincrement + Xorigin
+          
                """
     parser = OptionParser(usage)
-
-    #parser.add_option("-f", "--fold", type="int", dest="prt", default=364, help="Set the value to fold data at the place you need." )
     parser.add_option("-o", "--filename", type="string", dest="filename", default='DEFAULT', help="Set the name of the output file" )
     parser.add_option("-m", "--measure", type="int", dest="measure", default=None, help="Set the name of the output file" )
-
     (options, args) = parser.parse_args()
 
     ### Compute channels to acquire ###
