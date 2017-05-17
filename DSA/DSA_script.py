@@ -203,9 +203,9 @@ if __name__ == "__main__":
                """
     parser = OptionParser(usage)
     parser.add_option("-o", "--filename", type="string", dest="filename", default='DEFAULT', help="Set the name of the output file" )
-    parser.add_option("-m", "--measure", type="int", dest="measure", default=None, help="Set the name of the output file" )
+    parser.add_option("-m", "--measure", type="int", dest="measure", default=None, help="Set measurment number" )
     (options, args) = parser.parse_args()
-
+    
     ### Compute channels to acquire ###
     if len(args) == 0:
         print '\nYou must provide at least one channel\n'
@@ -214,10 +214,26 @@ if __name__ == "__main__":
         chan = []
         temp_chan = args[0].split(',')                  # Is there a coma?
         for i in range(len(temp_chan)):
+            try:
+                eval(temp_chan[i])
+            except:
+                print '\nPlease provide an existing channel (integer 1->4)\n'
+                sys.exit()
+            if eval(temp_chan[i]) not in [1,2,3,4]:
+                print '\nPlease provide an existing channel (integer 1->4)\n'
+                sys.exit()
             chan.append('CHAN' + temp_chan[i])
     else:
         chan = []
         for i in range(len(args)):
+            try:
+                eval(args[i])
+            except:
+                print '\nPlease provide an existing channel (integer 1->4)\n'
+                sys.exit()
+            if eval(args[i]) not in [1,2,3,4]:
+                print '\nPlease provide an existing channel (integer 1->4)\n'
+                sys.exit()
             chan.append('CHAN' + str(args[i]))
     print chan
     
