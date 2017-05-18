@@ -52,6 +52,7 @@ class Lecroy():
                 ### Acquire and save datas ###
                 for i in range(len(channel)):
                     ### Allow auto scaling the channel gain and offset ###
+                    self.final_new_amp = 0.005
                     k = 1
                     if spe_mode:
                         while k <= eval(spe_mode):
