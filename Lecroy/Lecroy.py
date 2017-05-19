@@ -10,7 +10,7 @@ from numpy import fromstring,int8,int16,float64,sign
 IP = '169.254.166.206'
 
 class Lecroy():
-        def __init__(self,channel=None,encoding='BYTE',spe_mode=None,filename=None, FACT=6.,query=None,command=None,FORCE=False,PRINT=False):
+        def __init__(self,channel=None,encoding='BYTE',spe_mode=None,filename=None, FACT=8.,query=None,command=None,FORCE=False,PRINT=False):
             if encoding=='BYTE':dtype=int8;NUM=256;LIM=217.          # 15% less than the maximal number possible
             elif encoding=='WORD':dtype=int16;NUM=65536;LIM=55700.   # 15% less than the maximal number possible
             
@@ -68,47 +68,48 @@ class Lecroy():
                             ma    = eval(stri[temp3+len(temp2):temp4])
                             diff = abs(mi) + abs(ma)
                             #print 'prev_amp:  ',diff
-                            temp2  = channel[i]+':VDIV'
-                            temp2_o  = channel[i]+':OFST'
-                            print 'MIN,MAX:   ',mi,ma
-                            ### To modify offset ###
-                            try:
-                                val = round((-1)*diff/2. + abs(mi),3)
-                                self.scope.write(temp2_o+' '+str(val))
-                            except:
-                                pass
-                            ########################
-                            ### To modify amplitude ###
+                            temp5    = channel[i]+':VDIV'
+                            temp5_o  = channel[i]+':OFST'
+                            #print 'MIN,MAX:   ',mi,ma
+                            
+                            ########## To modify offset and amplitude ###########
+                            val = round((-1)*diff/2. + abs(mi),3)
+                            self.scope.write(temp5_o+' '+str(val))                            
                             new_channel_amp  = round(diff/FACT,3)
-                            
-                            #temp2  = channel[i]+':VDIV'
-                            #temp3  = self.query(temp2+'?')
-                            #temp4 = temp3[(temp3.find(temp2+' ')+len(temp2+' ')):]
-                            #prev_channel_amp = eval(temp4[:temp4.find('V')])
-                            #print 'prev_amp:  ',prev_channel_amp
-                            
-                            #temp2_o  = channel[i]+':OFST'
-                            #temp3_o  = self.query(temp2_o+'?')
-                            #temp4_o = temp3_o[(temp3_o.find(temp2_o+' ')+len(temp2_o+' ')):]
-                            #prev_channel_offset = eval(temp4_o[:temp4_o.find('V')])
-                            
-                            ##print 'after_chan_amp:  ',new_channel_amp,'\n'
-                            #print (NUM/2.-10)*prev_channel_amp-prev_channel_offset, ma
-                            
                             if new_channel_amp<0.005:        # if lower than the lowest possible 5mV/div
                                 new_channel_amp = 0.005
-                            #elif  ma > ((NUM/2.-10)*tt3-tt3_o):
-                                #print 'AAAAAAAAAAAAAAAAAAA'
-                                #new_channel_amp = new_channel_amp*4       # test amplitude
-                                #k = k-1
-                            self.scope.write(temp2+' '+str(new_channel_amp))
-                            ########################
+                            self.scope.write(temp5+' '+str(new_channel_amp))
+                            #####################################################
+                            
                             self.single()
                             while self.query('TRMD?') != 'TRMD STOP':
                                 time.sleep(0.05)
                                 pass
+                            print 'Optimisation loop index:', k,eval(spe_mode)
                             
-                            print k,eval(spe_mode)
+                            ############### Checking part #######################
+                            if k==eval(spe_mode):
+                                VDIV = eval(self.query(temp5+'?').split(' ')[1])
+                                OFST = eval(self.query(temp5_o+'?').split(' ')[1])
+                                R_MI = -(4.5 * VDIV) - OFST
+                                R_MA =   4.5 * VDIV  - OFST
+                                stri = self.query(channel[i]+':PAVA? MIN,MAX')
+                                temp2 = 'MIN,'
+                                temp3 = stri.find(temp2)
+                                temp4 = stri.find(' V')
+                                mi    = eval(stri[temp3+len(temp2):temp4])
+                                stri = stri[temp4+len(' V'):]
+                                temp2 = 'MAX,'
+                                temp3 = stri.find(temp2)
+                                temp4 = stri.find(' V')
+                                ma    = eval(stri[temp3+len(temp2):temp4])
+                                if mi<R_MI or ma>R_MA:                        #if trace out of the screen optimize again
+                                    print '(SCOPE)   Min:',R_MI,' Max:',R_MA
+                                    print '(TRACE)   Min:',mi,' Max:',ma
+                                    k = k-1
+                                    
+                            ####################################################
+                            
                             k = k+1
                             
                         ### END of spe_mode #################################
@@ -189,7 +190,7 @@ if __name__ == '__main__':
     parser.add_option("-F", "--force", type="string", dest="force", default=None, help="Allows overwriting file" )
     parser.add_option("-e", "--encoding", type="string", dest="encoding", default='BYTE', help="For mofifying the encoding format of the answer" )
     parser.add_option("-m", "--spe_mode", type="string", dest="spe_mode", default=None, help="For allowing auto modification of the vertical gain" )
-    parser.add_option("-n", "--spe_fact", type="float", dest="spe_fact", default=6., help="For setting limits of the vertical gain, units are in number of scope division" )
+    parser.add_option("-n", "--spe_fact", type="float", dest="spe_fact", default=8., help="For setting limits of the vertical gain, units are in number of scope division. Do not overpass 9 due to a security in the code!" )
     (options, args) = parser.parse_args()
     
     ### Compute channels to acquire ###
