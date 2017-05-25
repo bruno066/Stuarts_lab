@@ -20,20 +20,22 @@ from optparse import OptionParser
 import commands as C
 import time
 
-IP               = "169.254.108.195"
-PORT          = 5025                            # agilent requirement listening port
+IP        = "169.254.108.195"
+PORT      = 5025                            # agilent requirement listening port
 PORT_TYPE = 'inst0'                           # agilent ethernet requirement
 
 class DSA_fast_oscillo():
-    def __init__(self,channel=None,filename=None,host=IP,INTERACTIVE=True,MEAS=None):
-        try:
-            self.sock = vxi.Instrument('169.254.108.195')
-            self.sock.write(':WAVeform:TYPE RAW')
-            self.sock.write(':WAVEFORM:BYTEORDER LSBFirst')
-            self.sock.write(':TIMEBASE:MODE MAIN')
-            self.sock.write(':WAV:SEGM:ALL ON')
-        except:
-            print "Wrong IP, Listening port or bad connection \n Check cables first"
+    def __init__(self,channel=None,filename=None,host=IP,INTERACTIVE=True,MEAS=None,IP=IP):
+        #try:
+        print host
+        self.sock = vxi.Instrument(host)
+        self.sock.write(':WAVeform:TYPE RAW')
+        self.sock.write(':WAVEFORM:BYTEORDER LSBFirst')
+        self.sock.write(':TIMEBASE:MODE MAIN')
+        self.sock.write(':WAV:SEGM:ALL ON')
+    #except:
+            #print "Wrong IP, Listening port or bad connection \nCheck cables first"
+            #sys.exit()
             
         if INTERACTIVE:
             pass
@@ -204,6 +206,7 @@ if __name__ == "__main__":
     parser = OptionParser(usage)
     parser.add_option("-o", "--filename", type="string", dest="filename", default='DEFAULT', help="Set the name of the output file" )
     parser.add_option("-m", "--measure", type="int", dest="measure", default=None, help="Set measurment number" )
+    parser.add_option("-i", "--ipadd", type="string", dest="ipadd", default=IP, help="Set ip address" )
     (options, args) = parser.parse_args()
     
     ### Compute channels to acquire ###
@@ -238,7 +241,7 @@ if __name__ == "__main__":
     print chan
     
     ### Initiate the class ###
-    DSA_fast_oscillo(channel=chan,filename=options.filename,MEAS=options.measure,INTERACTIVE=False)
+    DSA_fast_oscillo(channel=chan,host=options.ipadd,filename=options.filename,MEAS=options.measure,INTERACTIVE=False)
     
 
     
