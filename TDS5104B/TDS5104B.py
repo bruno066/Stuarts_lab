@@ -85,7 +85,7 @@ class TDS5104B():
 
 if __name__=="__main__":
 
-    usage = """usage: %prog [options] arg
+    usage = u"""usage: %prog [options] arg
 
                 EXAMPLES:
                     get_TDS5104B -o filename
