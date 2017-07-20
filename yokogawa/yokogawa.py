@@ -9,10 +9,10 @@ from numpy import savetxt
 HOSTNAME="169.254.166.207"
 
 class Yokogawa():
-    def __init__(self, filename=None,query=None,command=None,FORCE=False,SAVE=True):
+    def __init__(self, filename=None,query=None,command=None,host=HOSTNAME,FORCE=False,SAVE=True):
         ### Establish the connection ###
         self.sock=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect((HOSTNAME, 10001))
+        self.sock.connect((host, 10001))
         self.send('OPEN "anonymous"')
         ans = self.recv(1024)
 
@@ -102,8 +102,9 @@ if __name__=="__main__":
     parser.add_option("-q", "--query", type="str", dest="que", default=None, help="Set the query to use." )
     parser.add_option("-o", "--filename", type="string", dest="filename", default=None, help="Set the name of the output file" )
     parser.add_option("-F", "--force", type="string", dest="force", default=None, help="Allows overwriting file" )
+    parser.add_option("-i", "--ip_address", type="string", dest="ip_address", default=HOSTNAME, help="Set the ip address to establish the communication with" )
     (options, args) = parser.parse_args()
 
     
-    Yokogawa(query=options.que,command=options.com,filename=options.filename,FORCE=options.force)
+    Yokogawa(query=options.que,command=options.com,filename=options.filename,FORCE=options.force,host=options.ip_address)
 
