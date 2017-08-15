@@ -181,6 +181,14 @@ if __name__ == '__main__':
                EXAMPLES:
                    get_lecroy 1 -o filename
                Record the first channel and create two files name filename_lecroy and filename_lecroy.log
+               
+               
+               IMPORTANT INFORMATIONS:
+                    - Datas are obtained in a binary format: int8 
+                    - To retrieve datas (in "VERTUNIT"), see corresponding log file:
+                    DATA(VERTUNIT) = DATA(ACQUIRED) * VERTICAL_GAIN - VERTICAL_OFFSET
+                    
+                See for more informations:  Stuarts_lab/Prog_guide/Lecroy.pdf
 
                """
     parser = OptionParser(usage)
