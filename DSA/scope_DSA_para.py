@@ -122,7 +122,9 @@ class ytViewer(object):
             self.bin_data      = self.plotter_connection.recv()
             self.data          = fromstring(self.bin_data, dtype=int8)
             if len(self.data)<self.NMAX*self.fold:
-                print 'Number of point asked for the plot must not exceed the datas got from the scope \n Exiting...\n'
+                time.sleep(3)
+		self.worker.terminate()
+		print '\nNumber of point asked for the plot must not exceed the length of datas got from the scope \n\nExiting...\n'
                 sys.exit()
             self.folded_data   = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
             
