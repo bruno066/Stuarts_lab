@@ -121,7 +121,9 @@ class ytViewer(object):
             ### receive from pipe ###
             self.bin_data      = self.plotter_connection.recv()
             self.data          = fromstring(self.bin_data, dtype=int8)
-            #print 'DEBUG',len(self.data),self.NMAX*self.fold
+            if len(self.data)<self.NMAX*self.fold:
+                print 'Number of point asked for the plot must not exceed the datas got from the scope \n Exiting...\n'
+                sys.exit()
             self.folded_data   = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
             
             self.process_data(self.shear)
