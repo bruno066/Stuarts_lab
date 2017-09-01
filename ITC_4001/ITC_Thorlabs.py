@@ -10,9 +10,12 @@ class ITC_4001():
     def __init__(self,query=None,command=None,amplitude=None):
         ### Initiate communication ###
         rm = v.ResourceManager('@py')
-        self.thorlabs = rm.get_instrument('USB0::0x1313::0x804A::M00248997::INSTR')
+	try:
+            self.thorlabs = rm.get_instrument('USB0::0x1313::0x804A::M00248997::INSTR')
+        except:
+	    self.thorlabs = rm.get_instrument('USB::4883::32842::M00271786')
         
-        ### Basic communications ###
+	### Basic communications ###
         if query:
             self.command = query
             print '\nAnswer to query:',self.command
