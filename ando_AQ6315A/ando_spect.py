@@ -69,7 +69,7 @@ class ando6315A():
             self.scope.write(self.string)
             
         def read(self,length=10000000):
-            rep = self.scope.read()
+            rep = self.scope.read_raw()
             return rep
 
         def idn(self):
