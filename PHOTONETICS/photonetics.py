@@ -13,52 +13,49 @@ from numpy import savetxt,linspace
 
 GPIB_PORT = 1
 
-class ando6315A():
-        def __init__(self,query=None,command=None,FORCE=False,PORT=GPIB_PORT,filename=None,SAVE=True):
+class photonetics():
+        def __init__(self,query=None,command=None,PORT=GPIB_PORT,amplitude=None):
             ### establish GPIB communication ###
             r          = v.ResourceManager('@py')
             self.scope = r.get_instrument('GPIB::'+PORT+'::INSTR')
-            
             if query:                                         # to execute command from outside
                 print '\nAnswer to query:',query
                 self.write(query+'\n')
                 rep = self.read()
                 print rep,'\n'
-                sys.exit()
             elif command:
                 self.command = command
                 print '\nExecuting command',self.command
                 self.scope.write(self.command)
                 print '\n'
+
+            if amplitude: 
+                amplitude = round(eval(amplitude),2)
+                print '\nSetting EDFA to: ',amplitude,'mW\n'
+                self.modify_amplitude_EDFA(amplitude)
+                
+            sys.exit()
+
+
+        #####################  FUNCTIONS ##############################################
+        def modify_amplitude_EDFA(self,amplitude):
+            """ port 5 to be addressed """
+            #Set output power units to MW and get state
+            if amplitude==-1:
+                self.write('CH5:DISABLE')
+                print 'EDFA: DISABLE'
                 sys.exit()
-                
-            if filename:
-                self.lambd,self.amp = self.get_data()
-                self.amp = [eval(self.amp[i]) for i in range(len(self.amp))]
-
-                ### TO SAVE ###
-                if SAVE:
-                    temp_filename = filename + '_ANDO'
-                    temp = C.getoutput('ls').splitlines()                           # if file exist => exit
-                    for i in range(len(temp)):
-                        if temp[i] == temp_filename and not(FORCE):
-                            print '\nFile ', temp_filename, ' already exists, change filename, remove old file or use -F option to overwrite\n'
-                            sys.exit()
-
-                    savetxt(temp_filename,(self.lambd,self.amp))
-                
-        def get_data(self):
-            print "ACQUIRING..."
-            data    = self.query("LDATA").split(',')[1:] 
-            stopWL  = float(self.query("STPWL?"))
-            startWL = float(self.query("STAWL?"))
-            X = linspace(startWL,stopWL,len(data))
-            return X,data
-
-        def singleSweep(self):
-            s = self.write("SGL")
-            return s
+            self.write('MW;CH5:P=%1.2f'%amplitude)
+            setpower = self.query('MW;CH5:P?')
+            if  setpower == 'CH5:Disabled\n':
+                self.write('CH5:ENABLE')
+                print 'EDFA: ENABLE'
+            setpower = self.query('MW;CH5:P?')   
+            print 'EDFA:',setpower.split('=')[1]
+            
         
+                
+        #####################  BASICS FUNCTIONS #######################################
         def query(self,query,length=1000000):
             self.write(query)
             r = self.read(length=length)
@@ -86,12 +83,12 @@ if __name__ == '__main__':
 
                """
     parser = OptionParser(usage)
-    parser.add_option("-q", "--query", type="str", dest="com", default=None, help="Set the query to use." )
+    parser.add_option("-q", "--query", type="str", dest="que", default=None, help="Set the query to use." )
     parser.add_option("-c", "--command", type="str", dest="com", default=None, help="Set the command to execute." )
     parser.add_option("-i", "--gpib_port", type="str", dest="gpib_port", default='1', help="Set the gpib port to use." )
-    parser.add_option("-o", "--filename", type="string", dest="filename", default=None, help="Set the name of the output file" )
-    parser.add_option("-F", "--force", type="string", dest="force", default=None, help="Allows overwriting file" )
+    parser.add_option("-a", "--amplitude", type="str", dest="amplitude", default=None, help="Set the EDFA gain")
+    
     (options, args) = parser.parse_args()
 
     ### Start the talker ###
-    ando6315A(query=options.com,PORT=options.gpib_port,filename=options.filename,FORCE=options.force)
+    photonetics(query=options.que,command=options.com,PORT=options.gpib_port,amplitude=options.amplitude)
