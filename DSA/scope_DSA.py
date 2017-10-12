@@ -15,6 +15,7 @@ import matplotlib as mpl
 from optparse import OptionParser
 import vxi11 as vxi
 import gobject
+from matplotlib.font_manager import FontProperties
 
 mpl.pyplot.switch_backend('GTkAgg')
 
@@ -97,8 +98,14 @@ class Scope(object):
         self.shear_slider   = Slider(self.shear_sliderax,'Shear',-1,1,self.shear,'%1.2f')
         self.shear_slider.on_changed(self.update_shear)
         
-        if self.sequence:
-            mpl.pyplot.text(-1.17,-5.5,'Press "y" to save "n" to next',fontsize=25,rotation='vertical')
+        #if self.sequence:
+        font0 = FontProperties()
+        font1 = font0.copy()
+        font1.set_weight('bold')
+        mpl.pyplot.text(-1.1,-27,'Sequence mode:',fontsize=18,fontproperties=font1)
+        mpl.pyplot.text(-0.75,-30,'"b" to toggle it then:\n      "y" to save\n      "n" to next',fontsize=18)
+        mpl.pyplot.text(0.25,-27,'Useful keys:',fontsize=18,fontproperties=font1)
+        mpl.pyplot.text(0.5,-31,'"v" to change vertical/colorscale\n " " to pause\n "S" to save trace and picture\n "q" to exit',fontsize=18)
         
         cid  = self.fig.canvas.mpl_connect('motion_notify_event', self.mousemove)
         cid2 = self.fig.canvas.mpl_connect('key_press_event', self.keypress)
@@ -106,7 +113,10 @@ class Scope(object):
         self.axe_toggledisplay  = self.fig.add_axes([0.43,0.27,0.14,0.1])
         self.plot_circle(0,0,2,fc='#00FF7F')
         mpl.pyplot.axis('off')
-
+        
+        ### trigger the scope for the first time ###
+        self.single()
+        
         gobject.idle_add(self.update_plot)
         show()
         
@@ -119,7 +129,7 @@ class Scope(object):
         self.shear = round(self.shear_slider.val,2)
         self.process_data(self.shear)
         self.norm_fig()
-        draw()
+        self.fig.canvas.draw()
         
     def update_tab(self,val):
         self.remove_len1 = int(self.remove_len1_slider.val)
@@ -128,11 +138,7 @@ class Scope(object):
         self.Y0 = 0
         self.folded_data = self.folded_data_orig[:,self.remove_len1:-self.remove_len2]
         self.norm_fig()
-        #self.im      = self.ax.imshow(self.folded_data, interpolation='nearest', aspect='auto', origin='lower', vmin=self.data.min(), vmax=self.data.max())
-        #self.axh = axes([0.1,0.05,0.8,0.2])
-        #self.axh.clear()
-        #self.hline, = self.axh.plot(self.folded_data[self.Y0,:])
-        draw()
+        self.fig.canvas.draw()
 
     def update_plot(self):
         while self.UPDATE: 
@@ -141,10 +147,13 @@ class Scope(object):
                 print '\nNumber of point asked for the plot must not exceed the length of datas got from the scope \n\nExiting...\n'
                 sys.exit()
             
+            ### Verify that the scope has triggered ###
+            while self.query(':RSTate?')!= 'STOP\n':
+                pass
+            
             ### Compute the array to plot ###
-            self.stop()
             self.load_data()
-            self.run()
+            self.single()
             self.folded_data   = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
             self.process_data(self.shear)
 
@@ -164,7 +173,7 @@ class Scope(object):
                 self.axh.set_ylim(self.folded_data.min(), self.folded_data.max())
                 self.FIRST=False
             
-            draw()
+            self.fig.canvas.draw()
             
             if self.sequence:
                 self.toggle_update()
@@ -187,23 +196,34 @@ class Scope(object):
             del event
             self.run()
             sys.exit()
+        elif event.key == 'b': # switch sequence mode on/off
+            self.sequence = not(self.sequence)
+            self.toggle_update()
+            self.single()
+            time.sleep(0.15)
+            del event
         elif event.key == 'y':
             if self.sequence:
-                draw()
+                self.fig.canvas.draw()
                 self.Save()
+                self.single()
+                time.sleep(0.15)
             del event
         elif event.key == 'n':
             if self.sequence:
-                draw()
+                self.fig.canvas.draw()
                 self.toggle_update()
+                self.single()
+                time.sleep(0.15)
             del event
         elif event.key=='v':
             del event
             self.NORM = not(self.NORM)
             self.norm_fig()
-            draw()
+            self.fig.canvas.draw()
         elif event.key == ' ': # play/pause
-            self.toggle_update()
+            if not self.sequence:
+                self.toggle_update()
             del event
         elif event.key == 'S':
             self.Save()
@@ -227,7 +247,7 @@ class Scope(object):
             self.hline, = self.axh.plot(self.folded_data[self.Y0,:])
             self.axh.set_ylim(self.folded_data.min(), self.folded_data.max())
             self.axh.set_xlim(0, len(self.folded_data[0]))
-        draw()
+        self.fig.canvas.draw()
     
     def mousemove(self, event):
         # called on each mouse motion to get mouse position
@@ -239,7 +259,8 @@ class Scope(object):
     def toggle_update(self):
             self.UPDATE = not(self.UPDATE)
             if self.UPDATE:
-                self.run()
+                self.single()
+                time.sleep(0.15)
                 gobject.idle_add(self.update_plot)
             else:
                 self.stop()
@@ -250,15 +271,14 @@ class Scope(object):
                 self.axe_toggledisplay.clear()
                 self.plot_circle(0,0,2,fc='#FF4500')
                 mpl.pyplot.axis('off')
-                draw()
+                self.fig.canvas.draw()
             else:
                 self.patch.remove()
                 self.axe_toggledisplay  = self.fig.add_axes([0.43,0.27,0.14,0.1])
                 self.axe_toggledisplay.clear()
                 self.plot_circle(0,0,2,fc='#00FF7F')
                 mpl.pyplot.axis('off')
-                draw()
-                #gobject.idle_add(self.update_plot)
+                self.fig.canvas.draw()
     
     def plot_circle(self,x,y,r,fc='r'):
         """Plot a circle of radius r at position x,y"""
@@ -285,10 +305,13 @@ class Scope(object):
 
     def run(self):
         self.sock.write('RUN')
-    
+    def single(self):
+        self.sock.write('SINGLE')
     def stop(self):
         self.sock.write('STOP')
-        
+    def query(self,com):
+        self.sock.write(com)
+        return self.sock.read_raw()
     
 if __name__=='__main__':
 
