@@ -5,7 +5,7 @@
 from matplotlib.pyplot import axes, plot, figure, draw, show, rcParams
 from matplotlib.widgets import Slider, Cursor
 from numpy import array, roll, arange, sin, concatenate,\
-        fromfile, int8, reshape, memmap, zeros, fromstring
+        fromfile, int8, reshape, memmap, zeros, fromstring,copy
 from tempfile import TemporaryFile
 from numpy.random import randn
 import time
@@ -19,16 +19,28 @@ import gobject
 mpl.pyplot.switch_backend('GTkAgg')
 
 class ytViewer(object):
-    def __init__(self, chan, host, fold=19277, nmax=100,NORM=True):
+    def __init__(self, chan, host, fold=19277, nmax=100,NORM=True,sequence=False):
         self.UPDATE = True
-        self.color      = True
+        self.FIRST  = True
+        self.color  = True
         
-        self.flag_save = 1
+        ### To set the first name that has to be recorded ###
+        try:
+            L = C.getoutput('ls Image_*_DSACHAN1 | sort -n').splitlines()
+            temp = array([eval(L[i].split('_')[1]) for i in range(len(L))])
+            self.flag_save = max(temp) + 1
+        except:                      # nothing in the folder already
+            self.flag_save = 1
+        
         self.channel   = chan
         self.t             = time.time()
         self.NORM     = NORM
         self.NMAX     = nmax
-        self.fold         = fold
+        self.fold     = fold
+        self.shear    = 0.
+        self.sequence = sequence
+        self.vmin     = -125
+        self.vmax     = 125
         
         self.remove_len1 = 0 #6500  # 0 previously
         self.remove_len2 = 1 #12300 # 1 previously
@@ -45,26 +57,30 @@ class ytViewer(object):
         
         self.fig = figure(figsize=(16,7))
         
-        self.data                    = randn(self.NMAX*self.fold).reshape(self.NMAX,self.fold)[:,self.remove_len1:-self.remove_len2]
-        self.folded_data         = self.data[:,self.remove_len1:-self.remove_len2]
-        self.folded_data_orig = self.folded_data[:,self.remove_len1:-self.remove_len2]
-        
-        self.X0 = 0
+        self.load_data()
+        self.data        = self.data[:(self.NMAX*self.fold)]
+        self.folded_data = self.data.reshape(self.NMAX,self.fold)
+        self.folded_data_orig = copy(self.folded_data)
+        self.folded_data = self.folded_data[:,self.remove_len1:-self.remove_len2]
         self.Y0 = 0
         
         self.ax = axes([0.1,0.4,0.8,0.47])
         if not self.NORM:
-            self.im = self.ax.imshow(self.data, interpolation='nearest', aspect='auto',
-		    origin='lower', vmin=0, vmax=255)
+            self.im = self.ax.imshow(self.folded_data, interpolation='nearest', aspect='auto',
+		    origin='lower', vmin=self.vmin, vmax=self.vmax)
         else:
-	        self.im = self.ax.imshow(self.data, interpolation='nearest', aspect='auto',
-		    origin='lower', vmin=self.data.min(), vmax=self.data.max())
+	        self.im = self.ax.imshow(self.folded_data, interpolation='nearest', aspect='auto',
+		    origin='lower', vmin=self.folded_data.min(), vmax=self.folded_data.max())
 
         self.cursor = Cursor(self.ax, useblit=True, color='red', linewidth=2)
 
         self.axh = axes([0.1,0.05,0.8,0.2])
-        self.hline, = self.axh.plot(self.data[self.X0,:])
-        self.axh.set_xlim(0,len(self.data[0,:]))
+        self.hline, = self.axh.plot(self.folded_data[self.Y0,:])
+        self.axh.set_xlim(0,len(self.folded_data[0,:]))
+        if not self.NORM:
+            self.axh.set_ylim(self.vmin, self.vmax)
+        else:
+            self.axh.set_ylim(self.folded_data.min(), self.folded_data.max())
         
         # create 'remove_len1' slider
         self.remove_len1_sliderax = axes([0.1,0.96,0.8,0.02])
@@ -73,121 +89,146 @@ class ytViewer(object):
         
         # create 'remove_len2' slider
         self.remove_len2_sliderax = axes([0.1,0.92,0.8,0.02])
-        self.remove_len2_slider   = Slider(self.remove_len2_sliderax,'end',0.,self.fold*(3./4),self.remove_len2,'%d')
+        self.remove_len2_slider   = Slider(self.remove_len2_sliderax,'end',1.,self.fold*(3./4),self.remove_len2,'%d')
         self.remove_len2_slider.on_changed(self.update_tab)
         
-
+        # create 'shear' slider
+        self.shear_sliderax = axes([0.1,0.88,0.8,0.02])
+        self.shear_slider   = Slider(self.shear_sliderax,'Shear',-1,1,self.shear,'%1.2f')
+        self.shear_slider.on_changed(self.update_shear)
+        
+        if self.sequence:
+            mpl.pyplot.text(-1.17,-5.5,'Press "y" to save "n" to next',fontsize=25,rotation='vertical')
+        
         cid  = self.fig.canvas.mpl_connect('motion_notify_event', self.mousemove)
         cid2 = self.fig.canvas.mpl_connect('key_press_event', self.keypress)
 
         self.axe_toggledisplay  = self.fig.add_axes([0.43,0.27,0.14,0.1])
         self.plot_circle(0,0,2,fc='#00FF7F')
         mpl.pyplot.axis('off')
-        
-        self.load_data()
 
         gobject.idle_add(self.update_plot)
         show()
         
     def load_data(self):
-   #     self.processed = randn(1000000)[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
         self.sock.write(':WAV:DATA?')
         self.bin_data = self.sock.read_raw()[10:]
         self.data = fromstring(self.bin_data, dtype=int8)
-        self.processed = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)[:,self.remove_len1:-self.remove_len2]
+        
+    def update_shear(self,val):
+        self.shear = round(self.shear_slider.val,2)
+        self.process_data(self.shear)
+        self.norm_fig()
+        draw()
         
     def update_tab(self,val):
         self.remove_len1 = int(self.remove_len1_slider.val)
         self.remove_len2 = int(self.remove_len2_slider.val)
         
-        self.X0 = 0
         self.Y0 = 0
         self.folded_data = self.folded_data_orig[:,self.remove_len1:-self.remove_len2]
-        
-        self.im      = self.ax.imshow(self.folded_data, interpolation='nearest', aspect='auto', origin='lower', vmin=self.data.min(), vmax=self.data.max())
-        self.axh = axes([0.1,0.05,0.8,0.2])
-        self.axh.clear()
-        self.hline, = self.axh.plot(self.folded_data[self.X0,:])
+        self.norm_fig()
+        #self.im      = self.ax.imshow(self.folded_data, interpolation='nearest', aspect='auto', origin='lower', vmin=self.data.min(), vmax=self.data.max())
+        #self.axh = axes([0.1,0.05,0.8,0.2])
+        #self.axh.clear()
+        #self.hline, = self.axh.plot(self.folded_data[self.Y0,:])
+        draw()
 
     def update_plot(self):
         while self.UPDATE: 
             self.t = time.time()
-
-            ### receive from pipe ###
-            self.stop()
-            try:
-                self.load_data()
-            except:
-                print "Waiting for trigger"
-            self.run()
-            self.folded_data = self.processed
+            if len(self.data)<self.NMAX*self.fold:
+                print '\nNumber of point asked for the plot must not exceed the length of datas got from the scope \n\nExiting...\n'
+                sys.exit()
             
-            if self.remove_len1!=0 or self.remove_len2!=1: 
-                #if self.remove_len2 == 0
-                    #len(self.folded_data[:,:][0]
-                print '\n', len(self.folded_data[:,self.remove_len1:-self.remove_len2][0])
-                self.folded_data = self.folded_data[:,self.remove_len1:-self.remove_len2]
-               # self.folded_data = self.folded_data[:,6500:12200]
+            ### Compute the array to plot ###
+            self.stop()
+            self.load_data()
+            self.run()
+            self.folded_data   = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
+            self.process_data(self.shear)
 
+            self.folded_data = self.folded_data[:,self.remove_len1:-self.remove_len2]
             print '\nDATA ARE LEN:', len(self.data)
             print 'data loaded, update plot:',time.time()-self.t
             self.t = time.time()
             
-            try:
-                ### Update picture ###
-                self.im.set_data(self.folded_data)
-                self.hline.set_ydata(self.folded_data[self.Y0,:])
-            except:
-                print "Waiting for trigger"
-            
+            ### Update picture ###
+            self.im.set_data(self.folded_data)
+            self.hline.set_ydata(self.folded_data[self.Y0,:])
             print 'plot updated:',time.time()-self.t
-            
-            draw()
-            
-            
-            return True
-        return False
-
-    def update_cut(self):
-        self.hline.set_ydata(self.folded_data[self.Y0,:])
-
-    def treat_array_mod(self):
-        """ WARNING TO WRITE """
-        pass
-
-    def keypress(self, event):
-        if event.key == 'q': # eXit
-            del event
-            sys.exit()
-        elif event.key=='n':
-            del event
-            self.NORM = not(self.NORM)
-            if not self.NORM:
-                self.ax.clear()
-                self.im = self.ax.imshow(self.folded_data, interpolation='nearest', aspect='auto',
-                origin='lower', vmin=0, vmax=255)
-                self.axh.set_ylim(0, 255)
-            else:
+            if self.FIRST:
                 self.ax.clear()
                 self.im = self.ax.imshow(self.folded_data, interpolation='nearest', aspect='auto',
                 origin='lower', vmin=self.folded_data.min(), vmax=self.folded_data.max())
                 self.axh.set_ylim(self.folded_data.min(), self.folded_data.max())
+                self.FIRST=False
+            
+            draw()
+            
+            if self.sequence:
+                self.toggle_update()
+            return True
+        return False
+
+
+    def process_data(self,val):
+        """ Redress data in the space/ti;e diagram """
+        dd = self.folded_data.copy()
+        for i in range(0,self.folded_data.shape[0]):
+            dd[i,:] = roll(self.folded_data[i,:], int(i*val))
+        self.folded_data = dd
+        
+    def update_cut(self):
+        self.hline.set_ydata(self.folded_data[self.Y0,:])
+
+    def keypress(self, event):
+        if event.key == 'q': # eXit
+            del event
+            self.run()
+            sys.exit()
+        elif event.key == 'y':
+            if self.sequence:
+                draw()
+                self.Save()
+            del event
+        elif event.key == 'n':
+            if self.sequence:
+                draw()
+                self.toggle_update()
+            del event
+        elif event.key=='v':
+            del event
+            self.NORM = not(self.NORM)
+            self.norm_fig()
+            draw()
         elif event.key == ' ': # play/pause
-            params              = self.params
-            params['toggle'] = not(params['toggle'])
-            self.params        = params
             self.toggle_update()
+            del event
         elif event.key == 'S':
-            params = self.params
-            params['SAVE']         = True
-            self.params = params
-            time.sleep(1)
-            filename = 'Image_'+str(self.flag_save)+'_DSA'+str(self.channel)
-            self.fig.savefig(filename+'.png')
-            self.flag_save = self.flag_save + 1
+            self.Save()
         else:
             print 'Key '+str(event.key)+' not known'
-            
+    
+    def norm_fig(self):
+        if not self.NORM:
+            self.ax.clear()
+            self.im = self.ax.imshow(self.folded_data, interpolation='nearest', aspect='auto',
+            origin='lower', vmin=self.vmin, vmax=self.vmax)
+            self.axh.clear()
+            self.hline, = self.axh.plot(self.folded_data[self.Y0,:])
+            self.axh.set_ylim(self.vmin, self.vmax)
+            self.axh.set_xlim(0, len(self.folded_data[0]))
+        else:
+            self.ax.clear()
+            self.im = self.ax.imshow(self.folded_data, interpolation='nearest', aspect='auto',
+            origin='lower', vmin=self.folded_data.min(), vmax=self.folded_data.max())
+            self.axh.clear()
+            self.hline, = self.axh.plot(self.folded_data[self.Y0,:])
+            self.axh.set_ylim(self.folded_data.min(), self.folded_data.max())
+            self.axh.set_xlim(0, len(self.folded_data[0]))
+        draw()
+    
     def mousemove(self, event):
         # called on each mouse motion to get mouse position
         if event.inaxes!=self.ax: return
@@ -225,7 +266,7 @@ class ytViewer(object):
         self.patch = mpl.pyplot.gca().add_patch(cir)
         
         
-    def save(self):
+    def Save(self):
         if self.UPDATE: self.toggle_update()
         filename = 'Image_'+str(self.flag_save)+'_DSA'+str(self.channel)
         print 'Saving to files ', filename
@@ -238,9 +279,9 @@ class ytViewer(object):
         f = open(filename+'_log','w')
         f.write(self.preamble)
         f.close()
-        self.ytv.fig.savefig(filename+'.png')
-
-        self.flag_save = self.flag_save + 1        
+        self.fig.savefig(filename+'.png')
+        self.flag_save = self.flag_save + 1   
+        if not(self.UPDATE):self.toggle_update()
 
     def run(self):
         self.sock.write('RUN')
@@ -259,13 +300,15 @@ if __name__=='__main__':
                
                EXAMPLES:
                    scope_DSA -f 1000 -n 2000 1
-               Show the interactive space/time diagram for 1000pts folding and 2000 rt
-
+               Show the interactive space/time diagram for 1000pts folding and 2000 rt of channel 1
+                   scope_DSA -f 1000 -n 2000 -s 1 2
+                Same as before but for channel 2, and trigger the SAVE mode that display pictures one by one waiting for an input from the user side
 
                """
     parser = OptionParser(usage)
     parser.add_option("-f", "--fold", type="int", dest="prt", default=364, help="Set the value to fold for yt diagram." )
     parser.add_option("-n", "--nmax", type="int", dest="nmax", default=560, help="Set the value to the number of roundtrip to plot." )
+    parser.add_option("-s", "--sequence", type="int", dest="sequence", default=None, help="Set saving mode." )
     (options, args) = parser.parse_args()
 
     if len(args) == 0:
@@ -276,7 +319,7 @@ if __name__=='__main__':
         print "\nEnter ONLY one channel\n"
     
     ### begin TV ###
-    ytViewer(chan, host=IP, fold=options.prt, nmax=options.nmax)
+    ytViewer(chan, host=IP, fold=options.prt, nmax=options.nmax,sequence=options.sequence)
       
 #        ytExplorer(filename=sys.argv[1], rt=int(sys.argv[2]))
 

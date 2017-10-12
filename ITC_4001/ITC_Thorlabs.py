@@ -11,7 +11,9 @@ class ITC_4001():
         ### Initiate communication ###
         rm = v.ResourceManager('@py')
 	try:
-            self.thorlabs = rm.get_instrument('USB0::0x1313::0x804A::M00248997::INSTR')
+            self.thorlabs = rm.get_instrument('USB0::4883::32842::M00248997::INSTR')
+            #self.thorlabs = rm.get_instrument('USB0::0x1313::0x804A::M00248997::INSTR')
+            print 'ok'
         except:
 	    self.thorlabs = rm.get_instrument('USB::4883::32842::M00271786')
         
