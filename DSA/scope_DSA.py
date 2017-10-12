@@ -18,7 +18,7 @@ import gobject
 
 mpl.pyplot.switch_backend('GTkAgg')
 
-class ytViewer(object):
+class Scope(object):
     def __init__(self, chan, host, fold=19277, nmax=100,NORM=True,sequence=False):
         self.UPDATE = True
         self.FIRST  = True
@@ -301,14 +301,14 @@ if __name__=='__main__':
                EXAMPLES:
                    scope_DSA -f 1000 -n 2000 1
                Show the interactive space/time diagram for 1000pts folding and 2000 rt of channel 1
-                   scope_DSA -f 1000 -n 2000 -s 1 2
-                Same as before but for channel 2, and trigger the SAVE mode that display pictures one by one waiting for an input from the user side
+                   scope_DSA -s -f 1000 -n 2000 2
+                Same as before but for channel 2, and trigger the SAVE mode that display pictures one by one waiting for an input from the user side (just precize the -s option wherever you want)
 
                """
     parser = OptionParser(usage)
     parser.add_option("-f", "--fold", type="int", dest="prt", default=364, help="Set the value to fold for yt diagram." )
     parser.add_option("-n", "--nmax", type="int", dest="nmax", default=560, help="Set the value to the number of roundtrip to plot." )
-    parser.add_option("-s", "--sequence", type="int", dest="sequence", default=None, help="Set saving mode." )
+    parser.add_option("-s", "--seauence", action = "store_true", dest ="sequence", default=False, help="Set saving mode")
     (options, args) = parser.parse_args()
 
     if len(args) == 0:
@@ -319,7 +319,7 @@ if __name__=='__main__':
         print "\nEnter ONLY one channel\n"
     
     ### begin TV ###
-    ytViewer(chan, host=IP, fold=options.prt, nmax=options.nmax,sequence=options.sequence)
+    Scope(chan, host=IP, fold=options.prt, nmax=options.nmax,sequence=options.sequence)
       
 #        ytExplorer(filename=sys.argv[1], rt=int(sys.argv[2]))
 
