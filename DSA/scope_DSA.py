@@ -149,6 +149,7 @@ class Scope(object):
             
             ### Verify that the scope has triggered ###
             while self.query(':RSTate?')!= 'STOP\n':
+                time.sleep(0.05)
                 pass
             
             ### Compute the array to plot ###
