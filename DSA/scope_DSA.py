@@ -274,7 +274,6 @@ class Scope(object):
         
     def toggle_update(self):
             self.UPDATE = not(self.UPDATE)
-            print self.UPDATE
             if self.UPDATE:
                 self.single()
                 time.sleep(0.15)
@@ -305,6 +304,15 @@ class Scope(object):
         
     def Save(self):
         if self.UPDATE: self.toggle_update()
+        val = 0.05
+        ### Verify that the scope is stopped ###
+        while self.query(':RSTate?')!= 'STOP\n':
+            print val
+            time.sleep(val)
+            val = val + 0.01
+        ### Verify that the figure is plotted ###
+        self.fig.canvas.draw()
+        
         l = []
         ### Iddentify all active channels ###
         for i in [1,2,3,4]:
