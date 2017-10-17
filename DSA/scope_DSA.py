@@ -157,10 +157,12 @@ class Scope(object):
                 print '\nNumber of point asked for the plot must not exceed the length of datas got from the scope \n\nExiting...\n'
                 sys.exit()
             
+            val = 0.05
             ### Verify that the scope has triggered ###
             while self.query(':RSTate?')!= 'STOP\n':
-                time.sleep(0.1)
-                pass
+                print val
+                time.sleep(val)
+                val = val + 0.01
             
             ### Compute the array to plot ###
             self.load_data()
@@ -311,11 +313,13 @@ class Scope(object):
         ### Save all active channels ###
         for i in l:
             filename = 'Image_'+str(self.flag_save)+'_DSACHAN'+str(i)
+            self.sock.write(':WAVEFORM:SOURCE CHAN' + str(i))
+            self.sock.write(':WAV:DATA?')
+            data = self.sock.read_raw()[10:]
             print 'Saving to files ', filename
             ff = open(filename,'w')
-            ff.write(self.bin_data)
+            ff.write(data)
             ff.close()
-            self.sock.write(':WAVEFORM:SOURCE ' + self.channel)
             self.sock.write(':WAVEFORM:PREAMBLE?')
             self.preamble = self.sock.read()
             f = open(filename+'_log','w')
