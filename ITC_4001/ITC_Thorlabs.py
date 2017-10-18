@@ -10,10 +10,11 @@ class ITC_4001():
     def __init__(self,INSTR,query=None,command=None,amplitude=None):
         ### Initiate communication ###
         rm = v.ResourceManager('@py')
-        self.thorlabs = rm.get_instrument(INSTR)
-        #except:
-            ##print '\nWrong connection => Check address or cables\n'
-            #sys.exit()
+        try:
+	    self.thorlabs = rm.get_instrument(INSTR)
+        except:
+            print '\nWrong connection => Check address or cables\n'
+            sys.exit()
 
         ### Basic communications ###
         if query:
