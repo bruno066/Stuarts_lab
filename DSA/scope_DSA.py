@@ -25,16 +25,8 @@ class Scope(object):
         self.UPDATE = True
         self.color  = True
         
-        ### To set the first name that has to be recorded ###
-        try:
-            L = C.getoutput('ls Image_*_DSACHAN1 | sort -n').splitlines()
-            temp = array([eval(L[i].split('_')[1]) for i in range(len(L))])
-            self.flag_save = max(temp) + 1
-        except:                      # nothing in the folder already
-            self.flag_save = 1
-        
-        self.channel   = chan
-        self.t             = time.time()
+        self.channel  = chan
+        self.t        = time.time()
         self.NORM     = NORM
         self.NMAX     = nmax
         self.fold     = fold
@@ -43,21 +35,36 @@ class Scope(object):
         self.vmin     = -125
         self.vmax     = 125
         
+        ### To set the first name that has to be recorded ###
+        try:
+            L = C.getoutput('ls Image_*_DSA'+self.channel+' | sort -n').splitlines()
+            temp = array([eval(L[i].split('_')[1]) for i in range(len(L))])
+            self.flag_save = max(temp) + 1
+        except:                      # nothing in the folder already
+            self.flag_save = 1
+        
         self.remove_len1 = 0 #6500  # 0 previously
         self.remove_len2 = 1 #12300 # 1 previously
         
         try:
-            self.sock = vxi.Instrument('169.254.108.195')
+            self.sock = vxi.Instrument(host)
             self.sock.write(':WAVeform:TYPE RAW')
             self.sock.write(':WAVEFORM:BYTEORDER LSBFirst')
             self.sock.write(':TIMEBASE:MODE MAIN')
             self.sock.write(':WAVEFORM:SOURCE ' + chan)
             self.sock.write(':WAVEFORM:FORMAT BYTE')
         except:
-            print "Wrong IP, Listening port or bad connection \n Check cables first"
+            print "\nWrong IP, Listening port or bad connection =>  Check cables first\n"
+            sys.exit()
+        
+        if self.query(':'+self.channel+':DISP?')!='1\n':
+            print "\nChannel "+chan[-1]+' is not active...\n'
+            sys.exit()
         
         self.fig = figure(figsize=(16,7))
         
+        ### trigger the scope for the first time ###
+        self.single()
         self.load_data()
         self.update_tabs()
         self.Y0 = 0
@@ -110,9 +117,6 @@ class Scope(object):
         self.axe_toggledisplay  = self.fig.add_axes([0.43,0.27,0.14,0.1])
         self.plot_circle(0,0,2,fc='#00FF7F')
         mpl.pyplot.axis('off')
-        
-        ### trigger the scope for the first time ###
-        self.single()
         
         gobject.idle_add(self.update_plot)
         show()
@@ -265,9 +269,10 @@ class Scope(object):
             f = open(filename+'_log','w')
             f.write(self.preamble)
             f.close()
+        self.sock.write(':WAVEFORM:SOURCE ' + self.channel)
+        filename = 'Image_'+str(self.flag_save)+'_DSA'+self.channel
         self.fig.savefig(filename+'.png')
         self.flag_save = self.flag_save + 1   
-        self.sock.write(':WAVEFORM:SOURCE ' + self.channel)
         if not(self.UPDATE):self.toggle_update()
     
     ### BEGIN actions to the window ###
@@ -300,17 +305,19 @@ class Scope(object):
             self.norm_fig()
             self.fig.canvas.draw()
         elif event.key == ' ': # play/pause
-            self.load_data()
-            self.update_tabs()
-            self.norm_fig()
             if not self.sequence:
+                self.load_data()
+                self.update_tabs()
+                self.norm_fig()
                 self.toggle_update()
             del event
         elif event.key == 'S':
-            self.load_data()
-            self.update_tabs()
-            self.norm_fig()
-            self.Save()
+            if not self.sequence:
+                self.load_data()
+                self.update_tabs()
+                self.norm_fig()
+                self.Save()
+            del event
         else:
             print 'Key '+str(event.key)+' not known'
             
@@ -344,21 +351,24 @@ if __name__=='__main__':
 
     IP = '169.254.108.195'
     
-    print '\nWARNING: To test the following functions: - self.save\n'
-
     usage = """usage: %prog [options] arg
                
                EXAMPLES:
                    scope_DSA -f 1000 -n 2000 1
                Show the interactive space/time diagram for 1000pts folding and 2000 rt of channel 1
+               
                    scope_DSA -s -f 1000 -n 2000 2
                 Same as before but for channel 2, and trigger the SAVE mode that display pictures one by one waiting for an input from the user side (just precize the -s option wherever you want)
+               
+                   scope_DSA -s -i 169.254.108.196 -f 1000 -n 2000 2
+                Same as before but changing the IP address used for the communication with the scope
 
                """
     parser = OptionParser(usage)
     parser.add_option("-f", "--fold", type="int", dest="prt", default=364, help="Set the value to fold for yt diagram." )
     parser.add_option("-n", "--nmax", type="int", dest="nmax", default=560, help="Set the value to the number of roundtrip to plot." )
-    parser.add_option("-s", "--seauence", action = "store_true", dest ="sequence", default=False, help="Set saving mode")
+    parser.add_option("-i", "--address", type="str", dest="address", default=IP, help="Set the IP address to use for communication with the scope." )
+    parser.add_option("-s", "--sequence", action = "store_true", dest ="sequence", default=False, help="Set saving mode")
     (options, args) = parser.parse_args()
 
     if len(args) == 0:
@@ -369,8 +379,6 @@ if __name__=='__main__':
         print "\nEnter ONLY one channel\n"
     
     ### begin TV ###
-    Scope(chan, host=IP, fold=options.prt, nmax=options.nmax,sequence=options.sequence)
-      
-#        ytExplorer(filename=sys.argv[1], rt=int(sys.argv[2]))
-
+    Scope(chan, host=options.address, fold=options.prt, nmax=options.nmax,sequence=options.sequence)
+    
 
