@@ -59,8 +59,7 @@ class Scope(object):
         self.fig = figure(figsize=(16,7))
         
         self.load_data()
-        self.folded_data = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
-        self.folded_data = self.folded_data[:,self.remove_len1:-self.remove_len2]
+        self.update_tabs()
         self.Y0 = 0
         
         self.ax = axes([0.1,0.4,0.8,0.47])
@@ -117,32 +116,8 @@ class Scope(object):
         
         gobject.idle_add(self.update_plot)
         show()
-        
-    def load_data(self):
-        self.sock.write(':WAV:DATA?')
-        self.bin_data = self.sock.read_raw()[10:]
-        self.data = fromstring(self.bin_data, dtype=int8)
-        
-    def update_shear(self,val):
-        self.shear = round(self.shear_slider.val,2)
-        self.folded_data = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
-        self.process_data(self.shear)
-        self.folded_data = self.folded_data[:,self.remove_len1:-self.remove_len2]
-        self.norm_fig()
-        self.fig.canvas.draw()
-        
-    def update_tab(self,val):
-        self.remove_len1 = int(self.remove_len1_slider.val)
-        self.remove_len2 = int(self.remove_len2_slider.val)
-        
-        self.Y0 = 0
-        self.folded_data = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
-        self.process_data(self.shear)
-        self.folded_data = self.folded_data[:,self.remove_len1:-self.remove_len2]
-            
-        self.norm_fig()
-        self.fig.canvas.draw()
-
+    
+    ### BEGIN main loop ###
     def update_plot(self):
         while self.UPDATE: 
             self.t = time.time()
@@ -150,20 +125,11 @@ class Scope(object):
                 print '\nNumber of point asked for the plot must not exceed the length of datas got from the scope \n\nExiting...\n'
                 sys.exit()
             
-            val = 0.05
-            ### Verify that the scope has triggered ###
-            while self.query(':RSTate?')!= 'STOP\n':
-                print val
-                time.sleep(val)
-                val = val + 0.01
-            
             ### Compute the array to plot ###
             self.load_data()
             if not self.sequence:
                 self.single()
-            self.folded_data   = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
-            self.process_data(self.shear)
-            self.folded_data = self.folded_data[:,self.remove_len1:-self.remove_len2]
+            self.update_tabs()
             print '\nDATA ARE LEN:', len(self.data)
             print 'data loaded, update plot:',time.time()-self.t
             self.t = time.time()
@@ -181,7 +147,7 @@ class Scope(object):
                 self.toggle_update()
             return True
         return False
-
+    ### END main loop ###
 
     def process_data(self,val):
         """ Redress data in the space/ti;e diagram """
@@ -189,55 +155,26 @@ class Scope(object):
         for i in range(0,self.folded_data.shape[0]):
             dd[i,:] = roll(self.folded_data[i,:], int(i*val))
         self.folded_data = dd
-        
-    def update_cut(self):
-        self.hline.set_ydata(self.folded_data[self.Y0,:])
-
-    def keypress(self, event):
-        if event.key == 'q': # eXit
-            del event
-            self.run()
-            sys.exit()
-        elif event.key == 'b': # switch sequence mode on/off
-            self.sequence = not(self.sequence)
-            self.toggle_update()
-            time.sleep(0.15)
-            del event
-        elif event.key == 'y':
-            if self.sequence:
-                self.fig.canvas.draw()
-                self.UPDATE = False
-                self.Save()
-                time.sleep(0.15)
-            del event
-        elif event.key == 'n':
-            if self.sequence:
-                self.fig.canvas.draw()
-                self.toggle_update()
-                time.sleep(0.15)
-            del event
-        elif event.key=='v':
-            del event
-            self.NORM = not(self.NORM)
-            self.norm_fig()
-            self.fig.canvas.draw()
-        elif event.key == ' ': # play/pause
-            self.folded_data = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
-            self.process_data(self.shear)
-            self.folded_data = self.folded_data[:,self.remove_len1:-self.remove_len2]
-            self.norm_fig()
-            if not self.sequence:
-                self.toggle_update()
-            del event
-        elif event.key == 'S':
-            self.folded_data = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
-            self.process_data(self.shear)
-            self.folded_data = self.folded_data[:,self.remove_len1:-self.remove_len2]
-            self.norm_fig()
-            self.Save()
-        else:
-            print 'Key '+str(event.key)+' not known'
     
+    def is_scope_stopped(self):
+        ### Verify that the scope has triggered ###
+        val = 0.05
+        while self.query(':RSTate?')!= 'STOP\n':
+            print 'Waiting for triggering:',val
+            time.sleep(val)
+            val = val + 0.01
+    
+    def load_data(self):
+        self.is_scope_stopped()
+        self.sock.write(':WAV:DATA?')
+        self.bin_data = self.sock.read_raw()[10:]
+        self.data = fromstring(self.bin_data, dtype=int8)
+        
+    def update_tabs(self):
+        self.folded_data = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
+        self.process_data(self.shear)
+        self.folded_data = self.folded_data[:,self.remove_len1:-self.remove_len2]        
+
     def norm_fig(self):
         if not self.NORM:
             self.ax.clear()
@@ -256,13 +193,22 @@ class Scope(object):
             self.axh.set_ylim(self.folded_data.min(), self.folded_data.max())
             self.axh.set_xlim(0, len(self.folded_data[0]))
         self.fig.canvas.draw()
-    
-    def mousemove(self, event):
-        # called on each mouse motion to get mouse position
-        if event.inaxes!=self.ax: return
-        self.X0 = int(round(event.xdata,0))
-        self.Y0 = int(round(event.ydata,0))
-        self.update_cut()
+        
+    ### BEGIN Slider actions ###
+    def update_shear(self,val):
+        self.shear = round(self.shear_slider.val,2)
+        self.update_tabs()
+        self.norm_fig()
+        self.fig.canvas.draw()
+        
+    def update_tab(self,val):
+        self.remove_len1 = int(self.remove_len1_slider.val)
+        self.remove_len2 = int(self.remove_len2_slider.val)
+        self.Y0 = 0
+        self.update_tabs()
+        self.norm_fig()
+        self.fig.canvas.draw()
+    ### END Slider actions ###
         
     def toggle_update(self):
             self.UPDATE = not(self.UPDATE)
@@ -287,12 +233,6 @@ class Scope(object):
                 self.plot_circle(0,0,2,fc='#00FF7F')
                 mpl.pyplot.axis('off')
                 self.fig.canvas.draw()
-    
-    def plot_circle(self,x,y,r,fc='r'):
-        """Plot a circle of radius r at position x,y"""
-        cir = mpl.patches.Circle((x,y), radius=r, fc=fc)
-        self.patch = mpl.pyplot.gca().add_patch(cir)
-        
         
     def Save(self):
         if self.UPDATE: self.toggle_update()
@@ -329,6 +269,66 @@ class Scope(object):
         self.flag_save = self.flag_save + 1   
         self.sock.write(':WAVEFORM:SOURCE ' + self.channel)
         if not(self.UPDATE):self.toggle_update()
+    
+    ### BEGIN actions to the window ###
+    def keypress(self, event):
+        if event.key == 'q': # eXit
+            del event
+            self.run()
+            sys.exit()
+        elif event.key == 'b': # switch sequence mode on/off
+            self.sequence = not(self.sequence)
+            self.toggle_update()
+            time.sleep(0.15)
+            del event
+        elif event.key == 'y':
+            if self.sequence:
+                self.fig.canvas.draw()
+                self.UPDATE = False
+                self.Save()
+                time.sleep(0.15)
+            del event
+        elif event.key == 'n':
+            if self.sequence:
+                self.fig.canvas.draw()
+                self.toggle_update()
+                time.sleep(0.15)
+            del event
+        elif event.key=='v':
+            del event
+            self.NORM = not(self.NORM)
+            self.norm_fig()
+            self.fig.canvas.draw()
+        elif event.key == ' ': # play/pause
+            self.load_data()
+            self.update_tabs()
+            self.norm_fig()
+            if not self.sequence:
+                self.toggle_update()
+            del event
+        elif event.key == 'S':
+            self.load_data()
+            self.update_tabs()
+            self.norm_fig()
+            self.Save()
+        else:
+            print 'Key '+str(event.key)+' not known'
+            
+    def mousemove(self, event):
+        # called on each mouse motion to get mouse position
+        if event.inaxes!=self.ax: return
+        self.X0 = int(round(event.xdata,0))
+        self.Y0 = int(round(event.ydata,0))
+        self.update_cut()
+    ### END actions to the window ###
+    
+    def update_cut(self):
+        self.hline.set_ydata(self.folded_data[self.Y0,:])
+    
+    def plot_circle(self,x,y,r,fc='r'):
+        """Plot a circle of radius r at position x,y"""
+        cir = mpl.patches.Circle((x,y), radius=r, fc=fc)
+        self.patch = mpl.pyplot.gca().add_patch(cir)
 
     def run(self):
         self.sock.write('RUN')
