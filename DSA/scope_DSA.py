@@ -86,12 +86,12 @@ class Scope(object):
         
         # create 'remove_len1' slider
         self.remove_len1_sliderax = axes([0.1,0.96,0.8,0.02])
-        self.remove_len1_slider   = Slider(self.remove_len1_sliderax,'beg',0.,self.fold*(3./4),self.remove_len1,'%d')
+        self.remove_len1_slider   = Slider(self.remove_len1_sliderax,'beg',0.,self.fold,self.remove_len1,'%d')
         self.remove_len1_slider.on_changed(self.update_tab)
         
         # create 'remove_len2' slider
         self.remove_len2_sliderax = axes([0.1,0.92,0.8,0.02])
-        self.remove_len2_slider   = Slider(self.remove_len2_sliderax,'end',1.,self.fold*(3./4),self.remove_len2,'%d')
+        self.remove_len2_slider   = Slider(self.remove_len2_sliderax,'end',1.,self.fold,self.remove_len2,'%d')
         self.remove_len2_slider.on_changed(self.update_tab)
         
         # create 'shear' slider
@@ -335,6 +335,7 @@ class Scope(object):
             f.close()
         self.fig.savefig(filename+'.png')
         self.flag_save = self.flag_save + 1   
+        self.sock.write(':WAVEFORM:SOURCE ' + self.channel)
         if not(self.UPDATE):self.toggle_update()
 
     def run(self):
