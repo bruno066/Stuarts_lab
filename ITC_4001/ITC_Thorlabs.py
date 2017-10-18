@@ -7,17 +7,15 @@ from optparse import OptionParser
 import sys
 
 class ITC_4001():
-    def __init__(self,query=None,command=None,amplitude=None):
+    def __init__(self,INSTR,query=None,command=None,amplitude=None):
         ### Initiate communication ###
         rm = v.ResourceManager('@py')
-	try:
-            self.thorlabs = rm.get_instrument('USB0::4883::32842::M00248997::INSTR')
-            #self.thorlabs = rm.get_instrument('USB0::0x1313::0x804A::M00248997::INSTR')
-            print 'ok'
-        except:
-	    self.thorlabs = rm.get_instrument('USB::4883::32842::M00271786')
-        
-	### Basic communications ###
+        self.thorlabs = rm.get_instrument(INSTR)
+        #except:
+            ##print '\nWrong connection => Check address or cables\n'
+            #sys.exit()
+
+        ### Basic communications ###
         if query:
             self.command = query
             print '\nAnswer to query:',self.command
@@ -50,9 +48,10 @@ if __name__=="__main__":
     usage = """usage: %prog [options] arg
                
                EXAMPLES:
-                   set_ITC4001 -a val
+                   set_ITC4001 -a val 1
                
-               Set the pumping current to val
+               Set the pumping current to val to the instrument 1
+               Instrument numner must be from 1 to 3 (as written on it) 
 
                """
     parser = OptionParser(usage)
@@ -61,6 +60,23 @@ if __name__=="__main__":
     parser.add_option("-a", "--amplitude", type="float", dest="amplitude", default=None, help="Set the pumping current value")
     (options, args) = parser.parse_args()
     
+    ### Compute channels to acquire ###
+    if len(args) != 1:
+        print '\nYou must provide ONE address\n'
+        sys.exit()
+    else:
+        temp_instr = eval(args[0])
+    
+    if temp_instr == 1:
+        INSTR = 'USB0::4883::32842::M00248997::INSTR'
+    elif temp_instr == 2:
+        INSTR = 'USB::4883::32842::M00271786'
+    elif temp_instr == 3:
+        INSTR = 'USB::4883::32842::M00248304'
+    else:
+        print '\nYou MUST provide an address\n'
+        sys.exit()
+    
     ### Call the class with arguments ###
-    ITC_4001(query=options.que,command=options.com,amplitude=options.amplitude)
+    ITC_4001(INSTR,query=options.que,command=options.com,amplitude=options.amplitude)
 
