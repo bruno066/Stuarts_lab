@@ -86,12 +86,12 @@ class Scope(object):
         
         # create 'remove_len1' slider
         self.remove_len1_sliderax = axes([0.1,0.96,0.8,0.02])
-        self.remove_len1_slider   = Slider(self.remove_len1_sliderax,'beg',0.,self.fold*(3./4),self.remove_len1,'%d')
+        self.remove_len1_slider   = Slider(self.remove_len1_sliderax,'beg',0.,self.fold,self.remove_len1,'%d')
         self.remove_len1_slider.on_changed(self.update_tab)
         
         # create 'remove_len2' slider
         self.remove_len2_sliderax = axes([0.1,0.92,0.8,0.02])
-        self.remove_len2_slider   = Slider(self.remove_len2_sliderax,'end',1.,self.fold*(3./4),self.remove_len2,'%d')
+        self.remove_len2_slider   = Slider(self.remove_len2_sliderax,'end',1.,self.fold,self.remove_len2,'%d')
         self.remove_len2_slider.on_changed(self.update_tab)
         
         # create 'shear' slider
@@ -128,8 +128,11 @@ class Scope(object):
         
     def update_shear(self,val):
         self.shear = round(self.shear_slider.val,2)
-        print 'shear:',self.shear
+        if self.sequence:
+            self.folded_data = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
         self.process_data(self.shear)
+        if self.sequence:
+            self.folded_data = self.folded_data[:,self.remove_len1:-self.remove_len2]
         self.norm_fig()
         self.fig.canvas.draw()
         
@@ -139,7 +142,9 @@ class Scope(object):
         
         self.Y0 = 0
         if self.sequence:
-            self.folded_data = self.orig_data[:,self.remove_len1:-self.remove_len2]
+            self.folded_data = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
+            self.process_data(self.shear)
+            self.folded_data = self.folded_data[:,self.remove_len1:-self.remove_len2]
         else:
             self.folded_data = self.folded_data_orig[:,self.remove_len1:-self.remove_len2]
         self.norm_fig()
@@ -152,14 +157,17 @@ class Scope(object):
                 print '\nNumber of point asked for the plot must not exceed the length of datas got from the scope \n\nExiting...\n'
                 sys.exit()
             
+            val = 0.05
             ### Verify that the scope has triggered ###
             while self.query(':RSTate?')!= 'STOP\n':
-                time.sleep(0.1)
-                pass
+                print val
+                time.sleep(val)
+                val = val + 0.01
             
             ### Compute the array to plot ###
             self.load_data()
-            self.single()
+            if not self.sequence:
+                self.single()
             self.folded_data   = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
             self.process_data(self.shear)
 
@@ -193,10 +201,7 @@ class Scope(object):
 
     def process_data(self,val):
         """ Redress data in the space/ti;e diagram """
-        if self.sequence:
-            dd = self.orig_data.copy()
-        else:
-            dd = self.folded_data.copy()
+        dd = self.folded_data.copy()
         for i in range(0,self.folded_data.shape[0]):
             dd[i,:] = roll(self.folded_data[i,:], int(i*val))
         self.folded_data = dd
@@ -217,9 +222,8 @@ class Scope(object):
         elif event.key == 'y':
             if self.sequence:
                 self.fig.canvas.draw()
-                self.single()
+                self.UPDATE = False
                 self.Save()
-                self.toggle_update()
                 time.sleep(0.15)
             del event
         elif event.key == 'n':
@@ -270,13 +274,12 @@ class Scope(object):
         
     def toggle_update(self):
             self.UPDATE = not(self.UPDATE)
-            print self.UPDATE
             if self.UPDATE:
                 self.single()
                 time.sleep(0.15)
                 gobject.idle_add(self.update_plot)
             else:
-                self.single()
+                self.stop()
             self.color  = not(self.color)
             if not(self.color):
                 self.patch.remove()
@@ -301,19 +304,38 @@ class Scope(object):
         
     def Save(self):
         if self.UPDATE: self.toggle_update()
-        filename = 'Image_'+str(self.flag_save)+'_DSA'+str(self.channel)
-        print 'Saving to files ', filename
-        ff = open(filename,'w')
-        ff.write(self.bin_data)
-        ff.close()
-        self.sock.write(':WAVEFORM:SOURCE ' + self.channel)
-        self.sock.write(':WAVEFORM:PREAMBLE?')
-        self.preamble = self.sock.read()
-        f = open(filename+'_log','w')
-        f.write(self.preamble)
-        f.close()
+        val = 0.05
+        ### Verify that the scope is stopped ###
+        while self.query(':RSTate?')!= 'STOP\n':
+            print val
+            time.sleep(val)
+            val = val + 0.01
+        ### Verify that the figure is plotted ###
+        self.fig.canvas.draw()
+        
+        l = []
+        ### Iddentify all active channels ###
+        for i in [1,2,3,4]:
+            if self.query(':CHAN'+str(i)+':DISP?')=='1\n':
+                l.append(i)
+        ### Save all active channels ###
+        for i in l:
+            filename = 'Image_'+str(self.flag_save)+'_DSACHAN'+str(i)
+            self.sock.write(':WAVEFORM:SOURCE CHAN' + str(i))
+            self.sock.write(':WAV:DATA?')
+            data = self.sock.read_raw()[10:]
+            print 'Saving to files ', filename
+            ff = open(filename,'w')
+            ff.write(data)
+            ff.close()
+            self.sock.write(':WAVEFORM:PREAMBLE?')
+            self.preamble = self.sock.read()
+            f = open(filename+'_log','w')
+            f.write(self.preamble)
+            f.close()
         self.fig.savefig(filename+'.png')
         self.flag_save = self.flag_save + 1   
+        self.sock.write(':WAVEFORM:SOURCE ' + self.channel)
         if not(self.UPDATE):self.toggle_update()
 
     def run(self):

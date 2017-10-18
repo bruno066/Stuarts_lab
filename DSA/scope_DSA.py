@@ -23,7 +23,6 @@ mpl.pyplot.switch_backend('GTkAgg')
 class Scope(object):
     def __init__(self, chan, host, fold=19277, nmax=100,NORM=True,sequence=False):
         self.UPDATE = True
-        self.FIRST  = True
         self.color  = True
         
         ### To set the first name that has to be recorded ###
@@ -60,9 +59,7 @@ class Scope(object):
         self.fig = figure(figsize=(16,7))
         
         self.load_data()
-        self.data        = self.data[:(self.NMAX*self.fold)]
-        self.folded_data = self.data.reshape(self.NMAX,self.fold)
-        self.folded_data_orig = copy(self.folded_data)
+        self.folded_data = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
         self.folded_data = self.folded_data[:,self.remove_len1:-self.remove_len2]
         self.Y0 = 0
         
@@ -128,11 +125,9 @@ class Scope(object):
         
     def update_shear(self,val):
         self.shear = round(self.shear_slider.val,2)
-        if self.sequence:
-            self.folded_data = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
+        self.folded_data = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
         self.process_data(self.shear)
-        if self.sequence:
-            self.folded_data = self.folded_data[:,self.remove_len1:-self.remove_len2]
+        self.folded_data = self.folded_data[:,self.remove_len1:-self.remove_len2]
         self.norm_fig()
         self.fig.canvas.draw()
         
@@ -141,12 +136,10 @@ class Scope(object):
         self.remove_len2 = int(self.remove_len2_slider.val)
         
         self.Y0 = 0
-        if self.sequence:
-            self.folded_data = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
-            self.process_data(self.shear)
-            self.folded_data = self.folded_data[:,self.remove_len1:-self.remove_len2]
-        else:
-            self.folded_data = self.folded_data_orig[:,self.remove_len1:-self.remove_len2]
+        self.folded_data = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
+        self.process_data(self.shear)
+        self.folded_data = self.folded_data[:,self.remove_len1:-self.remove_len2]
+            
         self.norm_fig()
         self.fig.canvas.draw()
 
@@ -170,7 +163,6 @@ class Scope(object):
                 self.single()
             self.folded_data   = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
             self.process_data(self.shear)
-
             self.folded_data = self.folded_data[:,self.remove_len1:-self.remove_len2]
             print '\nDATA ARE LEN:', len(self.data)
             print 'data loaded, update plot:',time.time()-self.t
@@ -180,20 +172,12 @@ class Scope(object):
             self.im.set_data(self.folded_data)
             self.hline.set_ydata(self.folded_data[self.Y0,:])
             print 'plot updated:',time.time()-self.t
-            if self.FIRST:
-                self.ax.clear()
-                self.im = self.ax.imshow(self.folded_data, interpolation='nearest', aspect='auto',
-                origin='lower', vmin=self.folded_data.min(), vmax=self.folded_data.max())
-                self.axh.set_ylim(self.folded_data.min(), self.folded_data.max())
-                self.FIRST=False
             
             self.fig.canvas.draw()
             self.fig.canvas.draw()
             draw()
             
             if self.sequence:
-                self.orig_data = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
-                self.orig_data2 = self.orig_data[:,self.remove_len1:-self.remove_len2]
                 self.toggle_update()
             return True
         return False
@@ -238,10 +222,18 @@ class Scope(object):
             self.norm_fig()
             self.fig.canvas.draw()
         elif event.key == ' ': # play/pause
+            self.folded_data = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
+            self.process_data(self.shear)
+            self.folded_data = self.folded_data[:,self.remove_len1:-self.remove_len2]
+            self.norm_fig()
             if not self.sequence:
                 self.toggle_update()
             del event
         elif event.key == 'S':
+            self.folded_data = self.data[:self.NMAX*self.fold].reshape(self.NMAX,self.fold)
+            self.process_data(self.shear)
+            self.folded_data = self.folded_data[:,self.remove_len1:-self.remove_len2]
+            self.norm_fig()
             self.Save()
         else:
             print 'Key '+str(event.key)+' not known'
