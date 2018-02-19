@@ -12,6 +12,7 @@ with open(fpath, "a") as file:  # open file with append
     port = '/dev/ttyUSB0'
     baud = 9600
 
+    # 9600 8N1 DEFAULT
     with serial.Serial(port, baud, timeout=1) as ser:
 
         print('recording temperature')
