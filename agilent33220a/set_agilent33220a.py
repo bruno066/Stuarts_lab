@@ -10,6 +10,9 @@ from numpy import zeros,ones,linspace
 class agilent33220a():
         def __init__(self,query=None,command=None,IP_ADRESS=None,offset=None,amplitude=None,frequency=None,ramp=None):
             self.command = None
+            if not(IP_ADDRESS):
+                print '\nYou must provide an address...\n'
+                sys.exit()
             
             rm = v.ResourceManager('@py')
             self.inst = rm.get_instrument('TCPIP::'+IP_ADRESS+'169.254.2.20::INSTR')
@@ -79,9 +82,8 @@ if __name__ == '__main__':
     parser.add_option("-r", "--ramp", type="float", dest="ramp", default=None, help="Turn on ramp mode." )
     parser.add_option("-o", "--offset", type="str", dest="off", default=None, help="Set the offset value." )
     parser.add_option("-a", "--amplitude", type="str", dest="amp", default=None, help="Set the amplitude." )
-    parser.add_option("-f", "--frequency", type="str", dest="freq", default=None, help="Set the frequency." )
-    parser.add_option("-i", "--ip_address", type="str", dest='172.24.23.119', default=None, help="Set the Ip address to use for communicate." )
+    parser.add_option("-f", "--frequency", type="str", dest="ip_address", default='172.24.23.119', help="Set the Ip address to use for communicate." )
     (options, args) = parser.parse_args()
-    
+
     ### Start the talker ###
     agilent33220a(query=options.que,command=options.com,IP_ADDRESS=options.ip_address,ramp=options.ramp,offset=options.off,amplitude=options.amp,frequency=options.freq)
