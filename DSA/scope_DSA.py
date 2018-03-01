@@ -82,10 +82,16 @@ class Scope(object):
         self.axh = axes([0.1,0.05,0.8,0.2])
         self.hline, = self.axh.plot(self.folded_data[self.Y0,:])
         self.axh.set_xlim(0,len(self.folded_data[0,:]))
+        self.axhh = axes([0.92,0.4,0.07,0.47])
+        self.hhline, = self.axhh.plot(self.folded_data.mean(1),arange(self.NMAX))
+        self.axhh.set_ylim(0,self.NMAX-1)
+        self.axhh.set_xlim(self.folded_data.mean(1).min()-1,self.folded_data.mean(1).max()+1)
         if not self.NORM:
             self.axh.set_ylim(self.vmin, self.vmax)
+            self.axhh.set_xlim(self.vmin, self.vmax)
         else:
             self.axh.set_ylim(self.folded_data.min(), self.folded_data.max())
+            self.axhh.set_xlim(self.folded_data.mean(1).min()-1,self.folded_data.mean(1).max()+1)
         
         # create 'remove_len1' slider
         self.remove_len1_sliderax = axes([0.1,0.96,0.8,0.02])
@@ -141,6 +147,7 @@ class Scope(object):
             ### Update picture ###
             self.im.set_data(self.folded_data)
             self.hline.set_ydata(self.folded_data[self.Y0,:])
+            self.hhline.set_xdata(self.folded_data.mean(1))
             print 'plot updated:',time.time()-self.t
             
             self.fig.canvas.draw()
@@ -188,6 +195,10 @@ class Scope(object):
             self.hline, = self.axh.plot(self.folded_data[self.Y0,:])
             self.axh.set_ylim(self.vmin, self.vmax)
             self.axh.set_xlim(0, len(self.folded_data[0]))
+            self.axhh.clear()
+            self.hhline, = self.axhh.plot(self.folded_data.mean(1),arange(self.NMAX))
+            self.axhh.set_ylim(0,self.NMAX-1)
+            self.axhh.set_xlim(self.vmin, self.vmax)
         else:
             self.ax.clear()
             self.im = self.ax.imshow(self.folded_data, interpolation='nearest', aspect='auto',
@@ -196,6 +207,10 @@ class Scope(object):
             self.hline, = self.axh.plot(self.folded_data[self.Y0,:])
             self.axh.set_ylim(self.folded_data.min(), self.folded_data.max())
             self.axh.set_xlim(0, len(self.folded_data[0]))
+            self.axhh.clear()
+            self.hhline, = self.axhh.plot(self.folded_data.mean(1),arange(self.NMAX))
+            self.axhh.set_ylim(0,self.NMAX-1)
+            self.axhh.set_xlim(self.folded_data.mean(1).min()-1,self.folded_data.mean(1).max()+1)
         self.fig.canvas.draw()
         
     ### BEGIN Slider actions ###
@@ -331,7 +346,8 @@ class Scope(object):
     
     def update_cut(self):
         self.hline.set_ydata(self.folded_data[self.Y0,:])
-    
+        self.fig.canvas.draw()
+        
     def plot_circle(self,x,y,r,fc='r'):
         """Plot a circle of radius r at position x,y"""
         cir = mpl.patches.Circle((x,y), radius=r, fc=fc)
