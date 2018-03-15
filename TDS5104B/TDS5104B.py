@@ -29,7 +29,7 @@ class TDS5104B():
             print '\n'
             sys.exit()
             
-        self.scope.write('FPAnel:PRESS RUnstop')
+        self.stop()
         self.scope.write('HORizontal:RECOrdlength?')
         length = self.scope.read()
         self.scope.write('DAT:STAR 1')
@@ -38,11 +38,12 @@ class TDS5104B():
         if filename:
             for i in range(len(channel)):
                 time.sleep(1)
-                self.get_data(chan=channel[i],filename=filename,SAVE=True)
+                self.get_data(chan=channel[i],filename=filename,SAVE=SAVE)
+            
+            self.run()
         else:
             print 'If you want to save, provide an output file name'
-                
-        self.scope.write('FPAnel:PRESS RUnstop')
+        
 
     def get_data(self,chan='CH1',filename='test_save_file_',PLOT=False,SAVE=False,LOG=True):
         self.scope.write('DAT:ENC FAS')
@@ -81,7 +82,12 @@ class TDS5104B():
         self.scope.write(cmd)
         r = self.scope.read(nbytes)
         return r
-
+    
+    def run(self):
+        self.scope.write('ACQUIRE:STATE ON')
+    
+    def stop(self):
+        self.scope.write('ACQUIRE:STATE OFF')
 
 if __name__=="__main__":
 
