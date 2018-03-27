@@ -9,7 +9,7 @@ import time
 IP = '169.254.135.36'
 
 class DSO_54853A():
-        def __init__(self,channel=None,filename=None,host=IP,query=None,command=None):
+        def __init__(self,channel=None,filename=None,host=IP,query=None,command=None,typ="BYTE"):
             self.command = None
             self.scope = v.Instrument(IP)
             self.scope.write(':WAVeform:TYPE RAW')
@@ -35,7 +35,7 @@ class DSO_54853A():
                 self.stop()
                 for i in range(len(channel)):
                     print 'trying to get channel',channel[i]
-                    self.get_data(chan=channel[i],filename=filename,SAVE=True)
+                    self.get_data(chan=channel[i],filename=filename,SAVE=True,typ=typ)
                     
                 self.run()
                 sys.exit()
@@ -49,7 +49,11 @@ class DSO_54853A():
             self.scope.write(':WAVEFORM:SOURCE ' + chan)
             self.scope.write(':WAVEFORM:FORMAT ' + typ)
             self.scope.write(':WAV:DATA?')
-            self.data = self.read_raw()[8:]
+            if typ=='ASCII':
+                self.data = self.read_raw()
+            elif typ=='BYTE':
+                self.data = self.read_raw()[8:]
+            
             self.data = self.data[:-1]     # to remove last shitty point
 
             ### TO SAVE ###
@@ -114,7 +118,7 @@ if __name__ == '__main__':
     parser.add_option("-c", "--command", type="str", dest="com", default=None, help="Set the command to use." )
     parser.add_option("-q", "--query", type="str", dest="que", default=None, help="Set the query to use." )
     parser.add_option("-o", "--filename", type="string", dest="filename", default=None, help="Set the name of the output file" )
-    parser.add_option("-m", "--measure", type="int", dest="measure", default=None, help="number of measure" )
+    parser.add_option("-t", "--type", type="str", dest="type", default="BYTE", help="Type of data returned (available values are 'BYTE' or 'ASCII')" )
     (options, args) = parser.parse_args()
 
     ### Compute channels to acquire ###
@@ -133,5 +137,5 @@ if __name__ == '__main__':
     print chan
     
     ### Start the talker ###
-    DSO_54853A(channel=chan,query=options.que,command=options.com,filename=options.filename)
+    DSO_54853A(channel=chan,query=options.que,command=options.com,filename=options.filename,typ=options.type)
     

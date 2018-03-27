@@ -1,11 +1,12 @@
 #!/usr/bin/python
 
-import visa as v
+import socket
 from optparse import OptionParser
 import sys
 import time
 from numpy import zeros,ones,linspace
 
+PORT=9221
 
 class TTITGF3162():
         def __init__(self,channel=None,query=None,command=None,IP_ADDRESS=None,offset=None,amplitude=None,frequency=None):
@@ -13,9 +14,9 @@ class TTITGF3162():
             if not(IP_ADDRESS):
                 print '\nYou must provide an address...\n'
                 sys.exit()
-                
-            rm = v.ResourceManager('@py')
-            self.inst = rm.get_instrument('TCPIP::'+IP_ADDRESS+'::INSTR')
+            
+            self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.s.connect((IP_ADDRESS,PORT))
             
             if query:
                 self.command = query
@@ -32,19 +33,19 @@ class TTITGF3162():
                 self.exit()
             
             if amplitude:
-                self.inst.write('AMPL '+amplitude)
+                self.write('AMPL '+amplitude)
             if frequency:
-                self.inst.write('FREQ '+frequency)
+                self.write('FREQ '+frequency)
             if offset:
-                self.inst.write('DCOFFS '+offset)
+                self.write('DCOFFS '+offset)
             
-            self.exit()
+            #self.exit()
 
         def write(self,query):
-            self.inst.write(query)
+            self.s.send(query+'\n')
             
         def read(self):
-            rep = self.inst.read()
+            rep = self.s.recv(1000)
             return rep
 
         def exit(self):
@@ -60,7 +61,9 @@ if __name__ == '__main__':
     usage = """usage: %prog [options] arg
                
                EXAMPLES:
-                   set_TTITGF3162 -f 80MHz -a 20
+                   set_TTITGF3162 -f 80000000 -a 20
+                   set_TTITGF3162 -f 80e6 -a 20  
+                   Note that both lines are equivalent
                    
                    Set the frequency to 80MHz and the power to 20dBm.
                """
@@ -71,7 +74,7 @@ if __name__ == '__main__':
     parser.add_option("-o", "--offset", type="str", dest="off", default=None, help="Set the offset value." )
     parser.add_option("-a", "--amplitude", type="str", dest="amp", default=None, help="Set the amplitude." )
     parser.add_option("-f", "--frequency", type="str", dest="freq", default=None, help="Set the frequency." )
-    parser.add_option("-i", "--ip_address", type="str", dest="ip_address", default='169.254.54.215', help="Set the Ip address to use for communicate." )
+    parser.add_option("-i", "--ip_address", type="str", dest="ip_address", default='169.254.62.40', help="Set the Ip address to use for communicate." )
     (options, args) = parser.parse_args()
     
         ### Compute channels to acquire ###
