@@ -7,8 +7,8 @@ import time
 from numpy import zeros,ones,linspace
 
 
-class agilentE8244A():
-        def __init__(self,query=None,command=None,IP_ADDRESS=None,offset=None,amplitude=None,frequency=None):
+class TTITGF3162():
+        def __init__(self,channel=None,query=None,command=None,IP_ADDRESS=None,offset=None,amplitude=None,frequency=None):
             self.command = None
             if not(IP_ADDRESS):
                 print '\nYou must provide an address...\n'
@@ -32,10 +32,11 @@ class agilentE8244A():
                 self.exit()
             
             if amplitude:
-                self.inst.write('POW '+amplitude)
+                self.inst.write('AMPL '+amplitude)
             if frequency:
                 self.inst.write('FREQ '+frequency)
-                
+            if offset:
+                self.inst.write('DCOFFS '+offset)
             
             self.exit()
 
@@ -59,7 +60,7 @@ if __name__ == '__main__':
     usage = """usage: %prog [options] arg
                
                EXAMPLES:
-                   set_agilentE8244A -f 80MHz -a 20
+                   set_TTITGF3162 -f 80MHz -a 20
                    
                    Set the frequency to 80MHz and the power to 20dBm.
                """
@@ -73,5 +74,19 @@ if __name__ == '__main__':
     parser.add_option("-i", "--ip_address", type="str", dest="ip_address", default='169.254.54.215', help="Set the Ip address to use for communicate." )
     (options, args) = parser.parse_args()
     
+        ### Compute channels to acquire ###
+    if (len(args) == 0) and (options.com is None) and (options.que is None):
+        print '\nYou must provide at least one channel\n'
+        sys.exit()
+    elif len(args) == 1:
+        chan = []
+        temp_chan = args[0].split(',')                  # Is there a coma?
+        for i in range(len(temp_chan)):
+            chan.append('CHN' + temp_chan[i])
+    else:
+        chan = []
+        for i in range(len(args)):
+            chan.append('CHN' + str(args[i]))
+    print chan
     ### Start the talker ###
-    agilentE8244A(query=options.que,command=options.com,IP_ADDRESS=options.ip_address,offset=options.off,amplitude=options.amp,frequency=options.freq)
+    TTITGF3162(channel=chan,query=options.que,command=options.com,IP_ADDRESS=options.ip_address,offset=options.off,amplitude=options.amp,frequency=options.freq)
