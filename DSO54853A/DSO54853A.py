@@ -7,7 +7,6 @@ import commands as C
 import time
 
 IP = '169.254.135.36'
-
 class DSO_54853A():
         def __init__(self,channel=None,filename=None,host=IP,query=None,command=None,typ="BYTE"):
             self.command = None

@@ -9,7 +9,7 @@ from numpy import savetxt
 HOSTNAME="169.254.166.207"
 
 class Yokogawa():
-    def __init__(self, filename=None,query=None,command=None,host=HOSTNAME,FORCE=False,SAVE=True):
+    def __init__(self, filename=None,query=None,command=None,host=HOSTNAME,FORCE=False,SAVE=True,trigger=False):
         ### Establish the connection ###
         self.sock=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((host, 10001))
@@ -34,10 +34,18 @@ class Yokogawa():
         elif command:
             self.command = command
             print '\nExecuting command',self.command
-            self.scope.write(self.command)
+            self.send(self.command)
             print '\n'
             sys.exit()
-
+        
+        if trigger:
+            self.send('*TRG')
+            flag = 0.1
+            while self.query(':STATUS:OPER:COND?') != '1':
+                time.sleep(flag)
+                print 'Waiting for trigger:', flag
+                flag = flag + 0.1
+        
         if filename:
             self.lambd,self.amp = self.get_data()
             self.lambd = [eval(self.lambd[i]) for i in range(len(self.lambd))]
@@ -73,7 +81,7 @@ class Yokogawa():
     def query(self,msg,length=2048):
         """Sends question and returns answer"""
         self.send(msg)
-        time.sleep(1)
+        #time.sleep(1)
         return(self.recv(length))
 
     def makesweep(self):
@@ -103,8 +111,9 @@ if __name__=="__main__":
     parser.add_option("-o", "--filename", type="string", dest="filename", default=None, help="Set the name of the output file" )
     parser.add_option("-F", "--force", type="string", dest="force", default=None, help="Allows overwriting file" )
     parser.add_option("-i", "--ip_address", type="string", dest="ip_address", default=HOSTNAME, help="Set the ip address to establish the communication with" )
+    parser.add_option("-t", "--trigger", action = "store_true", dest ="trigger", default=False, help="Make sure the instrument trigger once and finishes sweeping before acquiring the data")
     (options, args) = parser.parse_args()
 
     
-    Yokogawa(query=options.que,command=options.com,filename=options.filename,FORCE=options.force,host=options.ip_address)
+    Yokogawa(query=options.que,command=options.com,filename=options.filename,FORCE=options.force,host=options.ip_address,trigger=options.trigger)
 
