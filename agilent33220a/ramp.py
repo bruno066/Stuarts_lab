@@ -5,7 +5,7 @@ from optparse import OptionParser
 import sys
 import time
 from  numpy import zeros,ones,linspace
-from matplotlib.pyplot import plot,draw,show
+from matplotlib.pyplot import plot,draw,show,figure
 
 PORT = '5'
 
@@ -23,8 +23,8 @@ class TGA_12104():
             ramp = 4000
             
             try:
-                self.inst.write('VOLT '+str(0.3))
-                self.inst.write('FREQ '+str(5))
+                self.inst.write('VOLT '+str(1))
+                self.inst.write('FREQ '+str(200))
             except:
                 pass
             
@@ -56,6 +56,12 @@ class TGA_12104():
             ll  = list(linspace(-1,1,100+ramp))
             l4  = list(linspace(1,-1,ramp/3))
             l.extend(ll);l.extend(lll);l.extend(l4)
+            figure()
+            plot(l)
+            draw()
+            show(False)
+            raw_input()
+            
             return l
             
         def process(self):
