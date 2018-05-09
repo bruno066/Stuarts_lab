@@ -6,11 +6,10 @@ import sys
 import commands as C
 import time
 
-IP = '169.254.135.36'
 class DSO_54853A():
-        def __init__(self,channel=None,filename=None,host=IP,query=None,command=None,typ="BYTE"):
+        def __init__(self,channel=None,filename=None,host=None,query=None,command=None,typ="BYTE"):
             self.command = None
-            self.scope = v.Instrument(IP)
+            self.scope = v.Instrument(host)
             self.scope.write(':WAVeform:TYPE RAW')
             self.scope.write(':WAVEFORM:BYTEORDER LSBFirst')
             self.scope.write(':TIMEBASE:MODE MAIN')
@@ -93,7 +92,8 @@ class DSO_54853A():
             self.scope.write(':STOP')
             
 if __name__ == '__main__':
-
+    IP = '169.254.135.36'
+    
     usage = """usage: %prog [options] arg
     
                WARNING: - Be sure all the channel you provide are active
@@ -117,6 +117,8 @@ if __name__ == '__main__':
     parser.add_option("-c", "--command", type="str", dest="com", default=None, help="Set the command to use." )
     parser.add_option("-q", "--query", type="str", dest="que", default=None, help="Set the query to use." )
     parser.add_option("-o", "--filename", type="string", dest="filename", default=None, help="Set the name of the output file" )
+    parser.add_option("-i", "--ipadd", type="string", dest="ipadd", default=IP, help="Set ip address" )
+
     parser.add_option("-t", "--type", type="str", dest="type", default="BYTE", help="Type of data returned (available values are 'BYTE' or 'ASCII')" )
     (options, args) = parser.parse_args()
 
@@ -136,5 +138,5 @@ if __name__ == '__main__':
     print chan
     
     ### Start the talker ###
-    DSO_54853A(channel=chan,query=options.que,command=options.com,filename=options.filename,typ=options.type)
+    DSO_54853A(channel=chan,host=options.ipadd,query=options.que,command=options.com,filename=options.filename,typ=options.type)
     
