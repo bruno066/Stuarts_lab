@@ -5,7 +5,7 @@
 from matplotlib.pyplot import axes, plot, figure, draw, show, rcParams
 from matplotlib.widgets import Slider, Cursor
 from numpy import array, roll, arange, sin, concatenate,\
-        fromfile, int8, reshape, memmap, zeros, fromstring,copy,roll
+        fromfile, int8, reshape, memmap, zeros, fromstring,copy
 from tempfile import TemporaryFile
 from numpy.random import randn
 import time
@@ -24,7 +24,6 @@ class Scope(object):
     def __init__(self, chan, host, fold=19277, nmax=100,NORM=True,sequence=False):
         self.UPDATE = True
         self.color  = True
-        self.CMAP   = ['jet','seismic','Greys','plasma']
         
         self.channel  = chan
         self.t        = time.time()
@@ -83,16 +82,10 @@ class Scope(object):
         self.axh = axes([0.1,0.05,0.8,0.2])
         self.hline, = self.axh.plot(self.folded_data[self.Y0,:])
         self.axh.set_xlim(0,len(self.folded_data[0,:]))
-        self.axhh = axes([0.92,0.4,0.07,0.47])
-        self.hhline, = self.axhh.plot(self.folded_data.mean(1),arange(self.NMAX))
-        self.axhh.set_ylim(0,self.NMAX-1)
-        self.axhh.set_xlim(self.folded_data.mean(1).min()-1,self.folded_data.mean(1).max()+1)
         if not self.NORM:
             self.axh.set_ylim(self.vmin, self.vmax)
-            self.axhh.set_xlim(self.vmin, self.vmax)
         else:
             self.axh.set_ylim(self.folded_data.min(), self.folded_data.max())
-            self.axhh.set_xlim(self.folded_data.mean(1).min()-1,self.folded_data.mean(1).max()+1)
         
         # create 'remove_len1' slider
         self.remove_len1_sliderax = axes([0.1,0.96,0.8,0.02])
@@ -106,17 +99,17 @@ class Scope(object):
         
         # create 'shear' slider
         self.shear_sliderax = axes([0.1,0.88,0.8,0.02])
-        self.shear_slider   = Slider(self.shear_sliderax,'Shear',-0.5,0.5,self.shear,'%1.2f')
+        self.shear_slider   = Slider(self.shear_sliderax,'Shear',-1,1,self.shear,'%1.2f')
         self.shear_slider.on_changed(self.update_shear)
         
         #if self.sequence:
         font0 = FontProperties()
         font1 = font0.copy()
         font1.set_weight('bold')
-        mpl.pyplot.text(-0.5,-27,'Sequence mode:',fontsize=18,fontproperties=font1)
-        mpl.pyplot.text(-0.37,-29.5,'"b" to toggle it then:\n      "y" to save\n      "n" to next',fontsize=18)
-        mpl.pyplot.text(0.15,-27,'Useful keys:',fontsize=18,fontproperties=font1)
-        mpl.pyplot.text(0.25,-30.5,'"c" to change colormap\n "v" to change vertical/colorscale\n " " (space) to pause\n "S" to save trace and picture\n "q" to exit',fontsize=18)
+        mpl.pyplot.text(-1.1,-27,'Sequence mode:',fontsize=18,fontproperties=font1)
+        mpl.pyplot.text(-0.75,-30,'"b" to toggle it then:\n      "y" to save\n      "n" to next',fontsize=18)
+        mpl.pyplot.text(0.25,-27,'Useful keys:',fontsize=18,fontproperties=font1)
+        mpl.pyplot.text(0.5,-31,'"v" to change vertical/colorscale\n " " to pause\n "S" to save trace and picture\n "q" to exit',fontsize=18)
         
         cid  = self.fig.canvas.mpl_connect('motion_notify_event', self.mousemove)
         cid2 = self.fig.canvas.mpl_connect('key_press_event', self.keypress)
@@ -148,10 +141,11 @@ class Scope(object):
             ### Update picture ###
             self.im.set_data(self.folded_data)
             self.hline.set_ydata(self.folded_data[self.Y0,:])
-            self.hhline.set_xdata(self.folded_data.mean(1))
+            print 'plot updated:',time.time()-self.t
             
             self.fig.canvas.draw()
-            print 'plot updated:',time.time()-self.t
+            self.fig.canvas.draw()
+            draw()
             
             if self.sequence:
                 self.toggle_update()
@@ -188,28 +182,20 @@ class Scope(object):
     def norm_fig(self):
         if not self.NORM:
             self.ax.clear()
-            self.im = self.ax.imshow(self.folded_data,cmap=self.CMAP[0], interpolation='nearest', aspect='auto',
+            self.im = self.ax.imshow(self.folded_data, interpolation='nearest', aspect='auto',
             origin='lower', vmin=self.vmin, vmax=self.vmax)
             self.axh.clear()
             self.hline, = self.axh.plot(self.folded_data[self.Y0,:])
             self.axh.set_ylim(self.vmin, self.vmax)
             self.axh.set_xlim(0, len(self.folded_data[0]))
-            self.axhh.clear()
-            self.hhline, = self.axhh.plot(self.folded_data.mean(1),arange(self.NMAX))
-            self.axhh.set_ylim(0,self.NMAX-1)
-            self.axhh.set_xlim(self.vmin, self.vmax)
         else:
             self.ax.clear()
-            self.im = self.ax.imshow(self.folded_data,cmap=self.CMAP[0], interpolation='nearest', aspect='auto',
+            self.im = self.ax.imshow(self.folded_data, interpolation='nearest', aspect='auto',
             origin='lower', vmin=self.folded_data.min(), vmax=self.folded_data.max())
             self.axh.clear()
             self.hline, = self.axh.plot(self.folded_data[self.Y0,:])
             self.axh.set_ylim(self.folded_data.min(), self.folded_data.max())
             self.axh.set_xlim(0, len(self.folded_data[0]))
-            self.axhh.clear()
-            self.hhline, = self.axhh.plot(self.folded_data.mean(1),arange(self.NMAX))
-            self.axhh.set_ylim(0,self.NMAX-1)
-            self.axhh.set_xlim(self.folded_data.mean(1).min()-1,self.folded_data.mean(1).max()+1)
         self.fig.canvas.draw()
         
     ### BEGIN Slider actions ###
@@ -232,7 +218,7 @@ class Scope(object):
             self.UPDATE = not(self.UPDATE)
             if self.UPDATE:
                 self.single()
-                self.is_scope_stopped()
+                time.sleep(0.15)
                 gobject.idle_add(self.update_plot)
             else:
                 self.stop()
@@ -318,11 +304,6 @@ class Scope(object):
             self.NORM = not(self.NORM)
             self.norm_fig()
             self.fig.canvas.draw()
-        elif event.key=='c':
-            del event
-            self.CMAP = roll(self.CMAP,-1)
-            self.norm_fig()
-            self.fig.canvas.draw()
         elif event.key == ' ': # play/pause
             if not self.sequence:
                 self.load_data()
@@ -350,8 +331,7 @@ class Scope(object):
     
     def update_cut(self):
         self.hline.set_ydata(self.folded_data[self.Y0,:])
-        self.fig.canvas.draw()
-        
+    
     def plot_circle(self,x,y,r,fc='r'):
         """Plot a circle of radius r at position x,y"""
         cir = mpl.patches.Circle((x,y), radius=r, fc=fc)
