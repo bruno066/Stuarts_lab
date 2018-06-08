@@ -331,8 +331,9 @@ class Scope(object):
             f = open(filename+'_log','w')
             f.write(self.preamble)
             f.close()
-        self.sock.write(':WAVEFORM:SOURCE ' + self.channel)
-        filename = 'Image_'+str(self.flag_save)+'_DSA'+self.channel
+        temp = ''
+        temp = temp.join([i for i in self.channel])
+        filename = 'Image_'+str(self.flag_save)+'_DSA'+temp
         self.fig.savefig(filename+'.png')
         self.flag_save = self.flag_save + 1   
         if not(self.UPDATE):self.toggle_update()

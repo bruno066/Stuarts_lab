@@ -4,12 +4,12 @@ import socket
 from optparse import OptionParser
 import sys
 import time
-from numpy import zeros,ones,linspace
+from numpy import zeros,ones,linspace,arange,array,copy,concatenate
 
 PORT=9221
 
 class TTITGF3162():
-        def __init__(self,channel=None,query=None,command=None,IP_ADDRESS=None,offset=None,amplitude=None,frequency=None):
+        def __init__(self,channel=None,query=None,command=None,IP_ADDRESS=None,offset=None,amplitude=None,frequency=None,bruno_mes=False):
             self.command = None
             if not(IP_ADDRESS):
                 print '\nYou must provide an address...\n'
@@ -38,9 +38,62 @@ class TTITGF3162():
                 self.write('FREQ '+frequency)
             if offset:
                 self.write('DCOFFS '+offset)
+            if bruno_mes:
+                self.bruno_mes()
             
             #self.exit()
-
+            
+        def bruno_mes(self):
+            """MUST be integer numbers"""
+            MI   = -125
+            MA   = 125
+            INCR = 19
+            
+            ### CHANNEL 1
+            self.write('CHN 1')
+            self.write('CHN?')
+            print 'Acting on channel:',self.read()
+            self.write('WAVE ARB')
+            self.write('ARBLOAD ARB1')
+            self.write('FREQ 1000')
+            self.write('DCOFFS 0.05')
+            self.write('AMPL 0.1')
+            
+            l = arange(MI,MA,INCR)    # the ramp
+            lll = copy(l)[::-1][1:-1]
+            l = concatenate((l,lll))
+            self.write_array_to_byte(l,1)
+            
+            NB      = 2
+            NB_HIGH = 5
+            ### CHANNEL 2
+            self.write('CHN 2')
+            self.write('CHN?')
+            print 'Acting on channel:',self.read()
+            self.write('WAVE ARB')
+            self.write('ARBLOAD ARB2')
+            self.write('FREQ 1000')
+            self.write('DCOFFS 1')
+            self.write('AMPL 2')
+            
+            ll = []          # the pulses
+            for i in range(0,len(l)):
+                for j in range(15*NB):
+                    ll.append(MI)
+                for j in range(NB_HIGH):
+                    ll.append(MA)
+                for j in range(NB):
+                    ll.append(MI)
+                    
+            self.write_array_to_byte(ll,2)
+        
+        def write_array_to_byte(self,l,ARB):
+            ### Arguments: array, arbitrary waveform number to address the array to ###
+            a = ''.join([array(l[i]).tobytes()[:2] for i in range(len(l))])
+            temp = str(2*len(l))
+            self.write('ARB'+str(ARB)+' #'+str(len(temp))+temp+a)
+            time.sleep(0.2)
+        
         def write(self,query):
             self.s.send(query+'\n')
             
@@ -61,11 +114,11 @@ if __name__ == '__main__':
     usage = """usage: %prog [options] arg
                
                EXAMPLES:
-                   set_TTITGF3162 -f 80000000 -a 20
-                   set_TTITGF3162 -f 80e6 -a 20  
+                   set_TTITGF3162 -f 80000000 -a 2
+                   set_TTITGF3162 -f 80e6 -a 2
                    Note that both lines are equivalent
                    
-                   Set the frequency to 80MHz and the power to 20dBm.
+                   Set the frequency to 80MHz and the power to 2Vpp.
                """
                
     parser = OptionParser(usage)
@@ -75,10 +128,11 @@ if __name__ == '__main__':
     parser.add_option("-a", "--amplitude", type="str", dest="amp", default=None, help="Set the amplitude." )
     parser.add_option("-f", "--frequency", type="str", dest="freq", default=None, help="Set the frequency." )
     parser.add_option("-i", "--ip_address", type="str", dest="ip_address", default='169.254.62.40', help="Set the Ip address to use for communicate." )
+    parser.add_option("-b", "--bruno_mes",action="store_true", dest="bruno_mes", default='False', help="set the generator to runn arbitrary functions." )
     (options, args) = parser.parse_args()
     
         ### Compute channels to acquire ###
-    if (len(args) == 0) and (options.com is None) and (options.que is None):
+    if (len(args) == 0) and (options.com is None) and (options.que is None) and not(options.bruno_mes):
         print '\nYou must provide at least one channel\n'
         sys.exit()
     elif len(args) == 1:
@@ -92,4 +146,4 @@ if __name__ == '__main__':
             chan.append('CHN' + str(args[i]))
     print chan
     ### Start the talker ###
-    TTITGF3162(channel=chan,query=options.que,command=options.com,IP_ADDRESS=options.ip_address,offset=options.off,amplitude=options.amp,frequency=options.freq)
+    TTITGF3162(channel=chan,query=options.que,command=options.com,IP_ADDRESS=options.ip_address,offset=options.off,amplitude=options.amp,frequency=options.freq,bruno_mes=options.bruno_mes)
