@@ -52,7 +52,7 @@ class Yokogawa():
             self.amp = [eval(self.amp[i]) for i in range(len(self.amp))]
             ### TO SAVE ###
             if SAVE:
-                temp_filename = filename + '_YOKO'
+                temp_filename = filename + '_YOKO.txt'
                 temp = C.getoutput('ls').splitlines()                           # if file exist => exit
                 for i in range(len(temp)):
                     if temp[i] == temp_filename and not(FORCE):
