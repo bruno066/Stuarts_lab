@@ -30,13 +30,13 @@ class Scope(object):
         self.channel   = chan
         self.t         = time.time()
         self.NORM      = NORM
-        self.NMAX      = nmax
-        self.fold      = fold
         self.shear     = 0.
         self.sequence  = sequence
         self.vmin      = -125
         self.vmax      = 125
         self.HORIZ_VAL = 0.05
+        self.fold      = fold
+        self.NMAX      = nmax
         
         ### To set the first name that has to be recorded ###
         try:
@@ -47,8 +47,8 @@ class Scope(object):
             self.flag_save = 1
         
         for i in range(len(self.channel)):
-            exec("self.remove_len1%d = 0 #6500  # 0 previously" %i)
-            exec("self.remove_len2%d = 1 #12300 # 1 previously" %i)
+            exec("self.remove_len1%d = 0" %i)
+            exec("self.remove_len2%d = 1" %i)
         
         ### Establish the communication with the scope ###
         try:
@@ -75,6 +75,8 @@ class Scope(object):
         ### trigger the scope for the first time ###
         self.single()
         self.load_data()
+        if not(self.NMAX):
+            self.NMAX = int(len(self.data0)/self.fold)
         self.update_tabs()
         self.Y0 = 0
         
@@ -366,7 +368,6 @@ class Scope(object):
             del event
             self.NORM = not(self.NORM)
             self.norm_fig()
-            self.fig.canvas.draw()
         elif event.key=='c':
             del event
             self.CMAP = roll(self.CMAP,-1)
@@ -465,7 +466,7 @@ if __name__=='__main__':
                """
     parser = OptionParser(usage)
     parser.add_option("-f", "--fold", type="int", dest="prt", default=364, help="Set the value to fold for yt diagram." )
-    parser.add_option("-n", "--nmax", type="int", dest="nmax", default=560, help="Set the value to the number of roundtrip to plot." )
+    parser.add_option("-n", "--nmax", type="int", dest="nmax", default=None, help="Set the value to the number of roundtrip to plot." )
     parser.add_option("-i", "--address", type="str", dest="address", default=IP, help="Set the IP address to use for communication with the scope." )
     parser.add_option("-s", "--sequence", action = "store_true", dest ="sequence", default=False, help="Set saving mode")
     (options, args) = parser.parse_args()
