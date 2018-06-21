@@ -139,7 +139,7 @@ class ytViewer(object):
         font1 = font0.copy()
         font1.set_weight('bold')
         mpl.pyplot.text(-0.72,-32+VERT_VAL,'Useful keys:',fontsize=18,fontproperties=font1)
-        mpl.pyplot.text(-0.72,-41+VERT_VAL,'"c" to change colormap\n "v" to change vertical\n      /colorscale\n " " to pause\n "x" set Ch1 REMOVE sliders\n       values to channel2\n "t" Retrigger mode\n (NOT TOO MUCH POINTS) \n "q" to exit',fontsize=18)
+        mpl.pyplot.text(-0.72,-41+VERT_VAL,'"c" to change colormap\n "v" to change vertical\n      /colorscale\n " " to pause\n "w"/"x" set Ch1 REMOVE\n       sliders values to Ch2/3\n "t" Retrigger mode\n (NOT TOO MUCH POINTS) \n "q" to exit',fontsize=18)
         
         self.axe_toggledisplay  = self.fig.add_axes([0.,0.,1.0,0.02])
         if self.UPDATE:
@@ -280,10 +280,16 @@ class ytViewer(object):
             self.norm_fig()
         elif event.key == ' ': # play/pause
             self.toggle_update()
+        elif event.key == 'w':
+            if len(self.filenames)>=2:
+                print 'Set REMOVE values of channel 1 to channel 2'
+                self.remove_len11_slider.set_val(self.remove_len10)
+                self.remove_len21_slider.set_val(self.remove_len20)
         elif event.key == 'x':
-            print 'Set REMOVE values of channel 1 to channel2'
-            self.remove_len11_slider.set_val(self.remove_len10)
-            self.remove_len21_slider.set_val(self.remove_len20)
+            if len(self.filenames)>=3:
+                print 'Set REMOVE values of channel 1 to channel 3'
+                self.remove_len12_slider.set_val(self.remove_len10)
+                self.remove_len22_slider.set_val(self.remove_len20)
         elif event.key == 't':
             print 'Trying to smooth from index',self.index
             self.smooth_array()
