@@ -328,7 +328,7 @@ class ytViewer(object):
                 self.fig2ax1.imshow(self.folded_data_retriggered0,cmap=self.CMAP[0], interpolation='nearest', aspect='auto',origin='lower', vmin=self.folded_data_retriggered0.min(), vmax=self.folded_data_retriggered0.max())
                 self.fig2ax2 = self.fig2.add_subplot(122)
                 self.fig2ax2.clear()
-                self.fig2ax2.imshow(self.folded_data_retriggered1,cmap=self.CMAP[0], interpolation='nearest', aspect='auto',origin='lower', vmin=self.folded_data_retriggered0.min(), vmax=self.folded_data_retriggered0.max())
+                self.fig2ax2.imshow(self.folded_data_retriggered1,cmap=self.CMAP[0], interpolation='nearest', aspect='auto',origin='lower', vmin=self.folded_data_retriggered1.min(), vmax=self.folded_data_retriggered1.max())
             show(False)
             self.fig2.canvas.draw()
         else:
