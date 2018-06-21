@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 
 """Look at 2D static data"""
-from matplotlib.pyplot import axes, plot, figure, draw, show, rcParams
+from matplotlib.pyplot import axes, plot, figure, draw, show, rcParams, clf
 from matplotlib.widgets import Slider, Cursor
 from numpy import array, roll, arange, sin, concatenate,\
-        fromfile, uint8, int8, reshape, memmap, zeros, fromstring
+        fromfile, uint8, int8, reshape, memmap, zeros, fromstring, where,linspace
 from tempfile import TemporaryFile
 from numpy.random import randn
 import time
@@ -16,6 +16,8 @@ from optparse import OptionParser
 import vxi11 as vxi
 import gobject
 import matplotlib.pyplot as plt
+from scipy import interpolate
+from matplotlib.font_manager import FontProperties
 
 plt.style.use('classic')
 mpl.pyplot.switch_backend('GTkAgg')
@@ -23,20 +25,20 @@ mpl.pyplot.switch_backend('GTkAgg')
 class ytViewer(object):
     def __init__(self, filenames, fold=19277, nmax=100,NORM=True,dtype=int8,DEB=0,shear=0.):
         self.UPDATE = False
-        self.color  = True
+        self.color  = False
         self.CMAP   = ['jet','seismic','Greys','plasma']
         self.COLORS = ['b','g','r']
         
-        self.filenames = filenames
-        self.NORM      = NORM
-        self.NMAX      = nmax
-        self.fold      = fold
-        self.increment = 5
-        self.index     = 0
-        self.shear = shear
-        self.vmin      = -125
-        self.vmax      = 125
-        self.HORIZ_VAL = 0.05
+        self.filenames   = filenames
+        self.NORM        = NORM
+        self.NMAX        = nmax
+        self.fold        = fold
+        self.increment   = 5
+        self.index       = 0
+        self.shear       = shear
+        self.vmin        = -125
+        self.vmax        = 125
+        self.HORIZ_VAL   = 0.05
         
         for i in range(len(self.filenames)):
             exec("self.remove_len1%d = 0" %i)
@@ -74,7 +76,6 @@ class ytViewer(object):
         elif len(self.filenames)==3:
             self.declare_axis_3channel()
             
-        
         for i in range(len(self.filenames)):
             if not self.NORM:
                 exec("self.im%d = self.ax%d.imshow(self.folded_data%d, interpolation='nearest', aspect='auto',origin='lower', vmin=self.vmin, vmax=self.vmax)" %(i,i,i))
@@ -117,25 +118,29 @@ class ytViewer(object):
         for i in range(len(self.filenames)):
             exec("self.remove_len2%d_slider   = Slider(self.remove_len2%d_sliderax,'end',1.,self.fold,self.remove_len2%d,'%s')" %(i,i,i,'%d'))
             exec("self.remove_len2%d_slider.on_changed(self.update_tab)" %i)
-        
+        # create 'index' slider
+        self.index_sliderax = axes([0.175,0.975,0.775,0.02])
+        self.index_slider   = Slider(self.index_sliderax,'index',0,self.max_index-self.increment,0,'%d')
+        self.index_slider.on_changed(self.update_tab)
+        # create 'nmax' slider
+        self.nmax_sliderax = axes([0.175,0.955,0.775,0.02])
+        self.nmax_slider   = Slider(self.nmax_sliderax,'nmax',0,self.max_index,self.NMAX,'%d')
+        self.nmax_slider.on_changed(self.update_tab)
         # create 'shear' slider
         self.shear_sliderax = axes([0.175,0.935,0.775,0.02])
         self.shear_slider   = Slider(self.shear_sliderax,'Shear',-0.5,0.5,self.shear,'%1.2f')
         self.shear_slider.on_changed(self.update_shear)
         
-        # create 'index' slider
-        self.index_sliderax = axes([0.175,0.975,0.775,0.02])
-        self.index_slider   = Slider(self.index_sliderax,'index',0,self.max_index-self.increment,0,'%d')
-        self.index_slider.on_changed(self.update_tab)
-        
-        # create 'nmax' slider
-        self.nmax_sliderax = axes([0.175,0.955,0.775,0.02])
-        self.nmax_slider   = Slider(self.nmax_sliderax,'nmax',0,self.max_index,self.NMAX,'%d')
-        self.nmax_slider.on_changed(self.update_tab)
-        
         cid  = self.fig.canvas.mpl_connect('motion_notify_event', self.mousemove)
         cid2 = self.fig.canvas.mpl_connect('key_press_event', self.keypress)
 
+        VERT_VAL = -4
+        font0 = FontProperties()
+        font1 = font0.copy()
+        font1.set_weight('bold')
+        mpl.pyplot.text(-0.72,-32+VERT_VAL,'Useful keys:',fontsize=18,fontproperties=font1)
+        mpl.pyplot.text(-0.72,-41+VERT_VAL,'"c" to change colormap\n "v" to change vertical\n      /colorscale\n " " to pause\n "x" set Ch1 REMOVE sliders\n       values to channel2\n "t" Retrigger mode\n (NOT TOO MUCH POINTS) \n "q" to exit',fontsize=18)
+        
         self.axe_toggledisplay  = self.fig.add_axes([0.,0.,1.0,0.02])
         if self.UPDATE:
             self.plot_circle(0,0,2,fc='#00FF7F')
@@ -150,8 +155,6 @@ class ytViewer(object):
     def update_plot(self):
         while self.UPDATE:
             ### Compute the array to plot ###
-            print len(self.folded_data_orig30),len(self.folded_data_orig30[0])
-            print len(self.folded_data0),len(self.folded_data0[0])
             for i in range(len(self.filenames)):
                 exec("self.folded_data%d = self.folded_data_orig3%d[self.index:(self.index+self.NMAX)]" %(i,i))
             
@@ -223,7 +226,7 @@ class ytViewer(object):
                 exec("self.axh%d.set_ylim(self.folded_data%d.min(), self.folded_data%d.max())" %(i,i,i))
                 exec("self.axh%d.set_xlim(0, len(self.folded_data%d[0]))" %(i,i))
                 exec("self.hhline%d, = self.axhh.plot(self.folded_data%d.mean(1),arange(len(self.folded_data%d.mean(1))),self.COLORS[i])" %(i,i,i))
-            self.axhh.set_ylim(0,self.max_index-self.index-1)
+            self.axhh.set_ylim(0,len(self.folded_data0.mean(1)))
             self.axhh.set_xlim(LIM_MIN-1,LIM_MAX+1)
         self.fig.canvas.draw()
 
@@ -231,6 +234,7 @@ class ytViewer(object):
     def update_shear(self,val):
         self.shear = round(self.shear_slider.val,2)
         self.update_tabs()
+        self.update_tab(0)
         self.norm_fig()
         self.fig.canvas.draw()
 
@@ -240,38 +244,7 @@ class ytViewer(object):
         self.fig.canvas.draw()
     ### END Slider actions ###
     
-    
     ### BEGIN actions to the window ###
-    def keypress(self, event):
-        if event.key == 'q': # eXit
-            del event
-            sys.exit()
-        elif event.key=='c':
-            del event
-            self.CMAP = roll(self.CMAP,-1)
-            self.norm_fig()
-            self.fig.canvas.draw()
-        elif event.key=='v':
-            del event
-            self.NORM = not(self.NORM)
-            self.norm_fig()
-        elif event.key == ' ': # play/pause
-            self.toggle_update()
-        else:
-            print 'Key '+str(event.key)+' not known'
-            
-    def mousemove(self, event):
-        # called on each mouse motion to get mouse position
-        if len(self.filenames)==1:
-            if event.inaxes!=self.ax0: return
-        elif len(self.filenames)==2:
-            if event.inaxes!=self.ax0 and event.inaxes!=self.ax1: return
-        elif len(self.filenames)==3:
-            if event.inaxes!=self.ax0 and event.inaxes!=self.ax1 and event.inaxes!=self.ax2: return
-        self.X0 = int(round(event.xdata,0))
-        self.Y0 = int(round(event.ydata,0))
-        self.update_cut()
-        
     def toggle_update(self):
             self.UPDATE = not(self.UPDATE)
             if self.UPDATE:
@@ -291,9 +264,133 @@ class ytViewer(object):
                 self.plot_circle(0,0,2,fc='#00FF7F')
                 mpl.pyplot.axis('off')
                 self.fig.canvas.draw()
+                
+    def keypress(self, event):
+        if event.key == 'q': # eXit
+            del event
+            sys.exit()
+        elif event.key=='c':
+            del event
+            self.CMAP = roll(self.CMAP,-1)
+            self.norm_fig()
+            self.fig.canvas.draw()
+        elif event.key=='v':
+            del event
+            self.NORM = not(self.NORM)
+            self.norm_fig()
+        elif event.key == ' ': # play/pause
+            self.toggle_update()
+        elif event.key == 'x':
+            print 'Set REMOVE values of channel 1 to channel2'
+            self.remove_len11_slider.set_val(self.remove_len10)
+            self.remove_len21_slider.set_val(self.remove_len20)
+        elif event.key == 't':
+            print 'Trying to smooth from index',self.index
+            self.smooth_array()
+            print 'Done MF'
+        else:
+            print 'Key '+str(event.key)+' not known'
+    
+    def mousemove(self, event):
+        # called on each mouse motion to get mouse position
+        if len(self.filenames)==1:
+            if event.inaxes!=self.ax0: return
+        elif len(self.filenames)==2:
+            if event.inaxes!=self.ax0 and event.inaxes!=self.ax1: return
+        elif len(self.filenames)==3:
+            if event.inaxes!=self.ax0 and event.inaxes!=self.ax1 and event.inaxes!=self.ax2: return
+        self.X0 = int(round(event.xdata,0))
+        self.Y0 = int(round(event.ydata,0))
+        self.update_cut()
     ### END actions to the window ###
     
+    ### Divers useful functions ###
+    def plot_circle(self,x,y,r,fc='r'):
+        """Plot a circle of radius r at position x,y"""
+        cir = mpl.patches.Circle((x,y), radius=r, fc=fc)
+        self.patch = mpl.pyplot.gca().add_patch(cir)
     
+    def smooth_array(self):
+        if len(self.filenames)>=2 and self.UPDATE==False:
+            self.fig2 = figure(5,figsize=(16,7))
+            clf()
+            for i in range(len(self.filenames)):
+                exec("self.folded_data%d = self.folded_data_orig3%d[self.index:(self.index+self.NMAX)]" %(i,i))
+            if len(self.filenames)==2:
+                self.folded_data_retriggered1,self.folded_data_retriggered0 = self.trig_by_interpolation_pola(self.folded_data1,self.folded_data0)
+                self.fig2ax0 = self.fig2.add_subplot(111)
+                self.fig2ax0.clear()
+                self.fig2ax0.imshow(self.folded_data_retriggered0,cmap=self.CMAP[0], interpolation='nearest', aspect='auto',origin='lower', vmin=self.folded_data_retriggered0.min(), vmax=self.folded_data_retriggered0.max())
+            elif len(self.filenames)==3:
+                self.folded_data_retriggered2,self.folded_data_retriggered0,self.folded_data_retriggered1 = self.trig_by_interpolation_pola(self.folded_data2,self.folded_data0,self.folded_data1)
+                self.fig2ax1 = self.fig2.add_subplot(121)
+                self.fig2ax1.clear()
+                self.fig2ax1.imshow(self.folded_data_retriggered0,cmap=self.CMAP[0], interpolation='nearest', aspect='auto',origin='lower', vmin=self.folded_data_retriggered0.min(), vmax=self.folded_data_retriggered0.max())
+                self.fig2ax2 = self.fig2.add_subplot(122)
+                self.fig2ax2.clear()
+                self.fig2ax2.imshow(self.folded_data_retriggered1,cmap=self.CMAP[0], interpolation='nearest', aspect='auto',origin='lower', vmin=self.folded_data_retriggered0.min(), vmax=self.folded_data_retriggered0.max())
+            show(False)
+            self.fig2.canvas.draw()
+        else:
+            print 'This function REQUIRES a trigger'
+            
+    
+    def trig_by_interpolation_pola(self,data,pola1,pola2=None,thr=30,FACT=25,num_trig=0,DOWN=False):
+        if DOWN:
+            pos   = self.find_down(data,thr)
+        else:
+            pos   = self.find_up(data,thr)
+        l     = data    # for a first trigg  ->  #array([data[pos[i]-100:pos[i]+100] for i in xrange(len(pos)-1)])
+        lp1      = pola1
+        if pola2 is not None: lp2 = pola2
+        ll       = []
+        trace    = []
+        trace_p1 = []
+        if pola2 is not None: trace_p2 = []
+        for i in range(len(l)):
+                b     = interpolate.interp1d(linspace(0,len(l[i]),len(l[i])),l[i])
+                bp1   = interpolate.interp1d(linspace(0,len(lp1[i]),len(lp1[i])),lp1[i])
+                if pola2 is not None: bp2   = interpolate.interp1d(linspace(0,len(lp2[i]),len(lp2[i])),lp2[i])
+                xnew2 = linspace(0, len(l[i]),FACT*len(l[i]))
+                xnew  = linspace(0, len(lp1[i]),FACT*len(lp1[i]))
+                xnew3 = linspace(0, len(lp2[i]),FACT*len(lp2[i]))
+                try:
+                    temp2    = b(xnew2)
+                    temp2_p1 = bp1(xnew)
+                    if pola2 is not None: temp2_p2 = bp2(xnew3)
+                    if DOWN:
+                        temp = self.find_down(temp2,thr)
+                    else:
+                        temp = self.find_up(temp2,thr)
+                    ll.append(temp[num_trig])     # If several downward event found for the trigger
+                    trace.append(temp2)
+                    trace_p1.append(temp2_p1)
+                    if pola2 is not None: trace_p2.append(temp2_p2)
+                except:
+                    print '%d WARNING: Error repering => skiping a line'%i
+        lll   = []
+        lllp1 = []
+        if pola2 is not None: lllp2 = []
+        ll = array(ll)-array(ll).min()
+        for i in range(len(ll)):
+            lll.append(roll(trace[i],-ll[i]))
+            lllp1.append(roll(trace_p1[i],-ll[i]))
+            if pola2 is not None: lllp2.append(roll(trace_p2[i],-ll[i]))
+        return (array(lll),array(lllp1),array(lllp2)) if pola2 is not None else (array(lll),array(lllp1))
+    
+    def find_down(self,d, threshold):
+        digitized = zeros(shape=d.shape, dtype=uint8)
+        digitized[where(d < threshold)] = 255
+        derivative = digitized[1:]-digitized[0:-1]
+        indices = where(derivative == 255)[0]
+        return indices
+    def find_up(self,d, threshold):
+        digitized = zeros(shape=d.shape, dtype=uint8)
+        digitized[where(d > threshold)] = 255
+        derivative = digitized[1:]-digitized[0:-1]
+        indices = where(derivative == 255)[0]
+        return indices
+        
     def declare_axis_1channel(self):
         self.ax0                   = axes([0.125+self.HORIZ_VAL,0.25,0.81,0.62])
         self.axh0                  = axes([0.125+self.HORIZ_VAL,0.05,0.81,0.15])
@@ -321,14 +418,8 @@ class ytViewer(object):
         self.remove_len20_sliderax = axes([0.125+self.HORIZ_VAL,0.88,0.25,0.02])
         self.remove_len21_sliderax = axes([0.405+self.HORIZ_VAL,0.88,0.25,0.02])
         self.remove_len22_sliderax = axes([0.685+self.HORIZ_VAL,0.88,0.25,0.02])
-    
-    ### Divers useful functions ###
-    def plot_circle(self,x,y,r,fc='r'):
-        """Plot a circle of radius r at position x,y"""
-        cir = mpl.patches.Circle((x,y), radius=r, fc=fc)
-        self.patch = mpl.pyplot.gca().add_patch(cir)
-    
-    
+        
+        
 if __name__=='__main__':
 
     usage = """usage: %prog [options] arg
