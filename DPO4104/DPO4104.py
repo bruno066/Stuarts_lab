@@ -33,12 +33,13 @@ class DPO_4104():
             self.scope.write('DAT:STOP '+str(length))
             
             if measure:
-                for i in range(measure):
+                for i in range(measure[0]):
                     self.scope.write('FPAnel:PRESS RUnstop')
-                    self.get_data(chan=channel[0],filename=str(i),SAVE=True)
+                    for k in range(len(channel)):
+                        self.get_data(chan=channel[k],filename=str(i),SAVE=True)
                     self.scope.write('FPAnel:PRESS RUnstop')
-                    print 'Index of the measurement:',i
-                    #time.sleep(0.1)
+                    print 'Index of the measurement:',i, '   sleeping for ',measure[1]
+                    time.sleep(measure[1])
                 sys.exit()
                 
             if filename:
@@ -107,7 +108,7 @@ if __name__ == '__main__':
     parser.add_option("-c", "--command", type="str", dest="com", default=None, help="Set the command to use." )
     parser.add_option("-q", "--query", type="str", dest="que", default=None, help="Set the query to use." )
     parser.add_option("-o", "--filename", type="string", dest="filename", default=None, help="Set the name of the output file" )
-    parser.add_option("-m", "--measure", type="int", dest="measure", default=None, help="number of measure" )
+    parser.add_option("-m", "--measure", type="string", dest="measure", default=None, help="number of measure to provide as list or tuple: [nbmeas,sleeptime]" )
     (options, args) = parser.parse_args()
 
     ### Compute channels to acquire ###
@@ -128,5 +129,5 @@ if __name__ == '__main__':
     print chan
     
     ### Start the talker ###
-    DPO_4104(channel=chan,query=options.que,command=options.com,filename=options.filename,measure=options.measure)
+    DPO_4104(channel=chan,query=options.que,command=options.com,filename=options.filename,measure=eval(options.measure))
     
