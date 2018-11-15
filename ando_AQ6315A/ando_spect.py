@@ -11,7 +11,7 @@ import visa as v
 import commands as C
 from numpy import savetxt,linspace
 
-GPIB_PORT = 1
+GPIB_PORT = 2
 
 class ando6315A():
         def __init__(self,query=None,command=None,FORCE=False,PORT=GPIB_PORT,filename=None,SAVE=True):
@@ -88,7 +88,7 @@ if __name__ == '__main__':
     parser = OptionParser(usage)
     parser.add_option("-q", "--query", type="str", dest="com", default=None, help="Set the query to use." )
     parser.add_option("-c", "--command", type="str", dest="com", default=None, help="Set the command to execute." )
-    parser.add_option("-i", "--gpib_port", type="str", dest="gpib_port", default='1', help="Set the gpib port to use." )
+    parser.add_option("-i", "--gpib_port", type="str", dest="gpib_port", default='2', help="Set the gpib port to use." )
     parser.add_option("-o", "--filename", type="string", dest="filename", default=None, help="Set the name of the output file" )
     parser.add_option("-F", "--force", type="string", dest="force", default=None, help="Allows overwriting file" )
     (options, args) = parser.parse_args()

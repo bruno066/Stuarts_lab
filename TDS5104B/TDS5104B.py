@@ -43,9 +43,8 @@ class TDS5104B():
             self.run()
         else:
             print 'If you want to save, provide an output file name'
-        
 
-    def get_data(self,chan='CH1',filename='test_save_file_',PLOT=False,SAVE=False,LOG=True):
+    def get_data(self,chan='CH1',filename='test_save_file_',PLOT=False,SAVE=False,LOG=True,RET=False):
         self.scope.write('DAT:ENC FAS')
         self.scope.write('DAT:SOU '+chan)
         self.scope.write('WFMO:BYT_Nr 1')
@@ -72,6 +71,8 @@ class TDS5104B():
                 f.write(self.preamb)
                 f.close()
             print  chan + ' saved'
+        if RET:
+            return self.data
     
     def get_log_data(self):
         self.scope.write('WFMO?')
@@ -88,6 +89,9 @@ class TDS5104B():
     
     def stop(self):
         self.scope.write('ACQUIRE:STATE OFF')
+        
+    def close(self):
+        self.scope.close()
 
 if __name__=="__main__":
 

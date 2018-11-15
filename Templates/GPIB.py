@@ -1,65 +1,52 @@
 #!/usr/bin/python
 
-import visa as v
+import usb
+import usb.core
+import usb.util
 from optparse import OptionParser
 import sys
 import time
+import numpy as np
+import visa as v
+import commands as C
+from numpy import savetxt,linspace
 
-PORT = '5'
-
-class TGA_12104():
-        def __init__(self,query=None,command=None,kar=None,auto_lock=None):
-            self.command = None
+class ando6315A():
+        def __init__(self,query=None,command=None,PORT=GPIB_PORT):
+            ### establish GPIB communication ###
+            r          = v.ResourceManager('@py')
+            self.scope = r.get_instrument('GPIB::'+PORT+'::INSTR')
             
-            rm = v.ResourceManager('@py')
-            self.PID = rm.get_instrument('GPIB::2::INSTR')
-            self.PID.write('CEOI ON')
-            self.PID.write('EOIX ON')
-            
-            self.write('CONN '+PORT+',"CONAME"')
-            self.write('TERM LF')
-            
-            self.write('*IDN?')
-            print '\nCONNECTING to module:',self.read()
-            
-            if query:
-                self.command = query
-                print '\nAnswer to query:',self.command
-                self.write(self.command)
+            if query:                                         # to execute command from outside
+                print '\nAnswer to query:',query
+                self.write(query+'\n')
                 rep = self.read()
                 print rep,'\n'
-                self.exit()
+                sys.exit()
             elif command:
                 self.command = command
                 print '\nExecuting command',self.command
-                self.write(self.command)
+                self.scope.write(self.command)
                 print '\n'
-                self.exit()
-            
-            if auto_lock:
-                self.re_lock()
-            
-            self.exit()
-        
-        def re_lock(self):
-            self.write('AMAN 0')
-            time.sleep(0.1)
-            self.write('AMAN 1')
-        
-        def exit(self):
-            self.write('CONAME')
+                sys.exit()
+                
+
             sys.exit()
 
-        def write(self,query):
-            self.PID.write(query)
+
+        def query(self,query,length=1000000):
+            self.write(query)
+            r = self.read(length=length)
+            return r
             
-        def read(self):
-            rep = self.PID.read()
+        def write(self,query):
+            self.string = query + '\n'
+            self.scope.write(self.string)
+            
+        def read(self,length=10000000):
+            rep = self.scope.read_raw()
             return rep
 
-        def idn(self):
-            self.ep_out.write('*IDN?\r\n')
-            
 
 if __name__ == '__main__':
 
@@ -72,10 +59,10 @@ if __name__ == '__main__':
 
                """
     parser = OptionParser(usage)
-    parser.add_option("-c", "--command", type="str", dest="com", default=None, help="Set the command to use." )
-    parser.add_option("-q", "--query", type="str", dest="que", default=None, help="Set the query to use." )
-    parser.add_option("-a", "--autolock", type="str", dest="autolock", default=None, help="Enable auto locking." )
+    parser.add_option("-q", "--query", type="str", dest="com", default=None, help="Set the query to use." )
+    parser.add_option("-c", "--command", type="str", dest="com", default=None, help="Set the command to execute." )
+    parser.add_option("-i", "--gpib_port", type="str", dest="gpib_port", default='2', help="Set the gpib port to use." )
     (options, args) = parser.parse_args()
-    
+
     ### Start the talker ###
-    TGA_12104(query=options.que,command=options.com,auto_lock=options.autolock)
+    ando6315A(query=options.com,PORT=options.gpib_port)

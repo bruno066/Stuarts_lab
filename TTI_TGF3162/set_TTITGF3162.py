@@ -38,7 +38,7 @@ class TTITGF3162():
                 self.write('FREQ '+frequency)
             if offset:
                 self.write('DCOFFS '+offset)
-            if bruno_mes:
+            if bruno_mes is True:
                 self.bruno_mes()
             
             #self.exit()
