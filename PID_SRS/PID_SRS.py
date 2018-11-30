@@ -5,22 +5,19 @@ from optparse import OptionParser
 import sys
 import time
 
-PORT = '5'
-
 class TGA_12104():
-        def __init__(self,query=None,command=None,kar=None,auto_lock=None,lock=None,unlock=None):
-            self.command = None
+        def __init__(self,query=None,command=None,port=None,setpoint=None,auto_lock=None,lock=None,unlock=None):
             
             rm = v.ResourceManager('@py')
             self.PID = rm.get_instrument('GPIB::2::INSTR')
             self.PID.write('CEOI ON')
             self.PID.write('EOIX ON')
             
-            self.write('CONN '+PORT+',"CONAME"')
+            self.write('CONN '+port+',"CONAME"')
             self.write('TERM LF')
             
             self.write('*IDN?')
-            print '\nCONNECTING to module:',self.read()
+            print '\nCONNECTING to module on PORT', port,':',self.read()
             
             if query:
                 self.command = query
@@ -43,6 +40,8 @@ class TGA_12104():
             
             if auto_lock:
                 self.re_lock()
+            if setpoint:
+                self.write('SETP '+setpoint)
             
             self.exit()
         
@@ -59,20 +58,16 @@ class TGA_12104():
             self.PID.write(query)
             
         def read(self):
-            rep = self.PID.read()
-            return rep
-
-        def idn(self):
-            self.ep_out.write('*IDN?\r\n')
+            return self.PID.read()
             
 
 if __name__ == '__main__':
 
     usage = """usage: %prog [options] arg
                
-               
                EXAMPLES:
-                   
+                   set_PIDSRS -i 5 -s 
+                   Active the locking of the port 5
 
 
                """
@@ -82,7 +77,9 @@ if __name__ == '__main__':
     parser.add_option("-a", "--autolock", type="str", dest="autolock", default=None, help="Enable auto locking." )
     parser.add_option("-l", "--lock", type="str", dest="lock", default=None, help="Lock" )
     parser.add_option("-u", "--unlock", type="str", dest="unlock", default=None, help="Unlock" )
+    parser.add_option("-i", "--port", type="str", dest="port", default='5', help="Port for the PID freme to apply the command to" )
+    parser.add_option("-s", "--setpoint", type="str", dest="setpoint", default='5', help="Setpoint value to be used" )
     (options, args) = parser.parse_args()
     
     ### Start the talker ###
-    TGA_12104(query=options.que,command=options.com,auto_lock=options.autolock,lock=options.lock,unlock=options.unlock)
+    TGA_12104(query=options.que,command=options.com,port=options.port,setpoint=options.setpoint,auto_lock=options.autolock,lock=options.lock,unlock=options.unlock)
