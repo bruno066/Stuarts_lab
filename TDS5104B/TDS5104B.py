@@ -31,13 +31,14 @@ class TDS5104B():
             
         self.stop()
         self.scope.write('HORizontal:RECOrdlength?')
-        length = self.scope.read()
+        string = self.scope.read()
+        length = string[len(':HORIZONTAL:RECORDLENGTH '):]
         self.scope.write('DAT:STAR 1')
-        self.scope.write('DAT:STOP '+str(length))
+        self.scope.write('DAT:STOP '+length)
             
         if filename:
             for i in range(len(channel)):
-                time.sleep(1)
+                time.sleep(0.1)
                 self.get_data(chan=channel[i],filename=filename,SAVE=SAVE)
             
             self.run()
@@ -52,7 +53,6 @@ class TDS5104B():
         self.data = self.scope.read_raw()
         
         self.data = self.data[7:-1]     # to remove last shitty point
-
         ### TO SAVE ###
         if SAVE:
             temp = C.getoutput('ls').splitlines()                           # if file exist => exit

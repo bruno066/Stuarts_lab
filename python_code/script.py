@@ -6,10 +6,10 @@ sys.path.append('/home/bruno/Postdoc/job/Stuarts_lab/TDS5104B/')
 import TDS5104B as TDS
 reload(TDS)
 
-def histeresys(IND=5,chan=['CH1','CH3']):
+def histeresys(IND=5,chan=['CH2','CH3']):
     I = TDS.TDS5104B(channel=chan)
     
-    fig=figure(53)
+    fig=figure(53,figsize=(14,6))
     show(False)
     try:
         while True:
@@ -17,7 +17,7 @@ def histeresys(IND=5,chan=['CH1','CH3']):
             a = convert(I.get_data(RET=True,chan=chan[0]))
             b = convert(I.get_data(RET=True,chan=chan[1]))
             a = j.f_smooth_data(a,IND)
-            b = j.f_smooth_data(b,2*IND)
+            b = j.f_smooth_data(b,10*IND)
             idx = np.argmax(b)
             clf()
             plot(b[0:idx],a[0:idx],'b')
