@@ -48,6 +48,8 @@ class TGA_12104():
         def re_lock(self):
             self.write('AMAN 0')
             time.sleep(0.1)
+            self.write('MOUT 5.0')
+            time.sleep(0.1)
             self.write('AMAN 1')
         
         def exit(self):
@@ -74,11 +76,11 @@ if __name__ == '__main__':
     parser = OptionParser(usage)
     parser.add_option("-c", "--command", type="str", dest="com", default=None, help="Set the command to use." )
     parser.add_option("-q", "--query", type="str", dest="que", default=None, help="Set the query to use." )
-    parser.add_option("-a", "--autolock", type="str", dest="autolock", default=None, help="Enable auto locking." )
+    parser.add_option("-a", "--autolock", action = "store_true", dest="autolock", default=False, help="Enable auto locking." )
     parser.add_option("-l", "--lock", type="str", dest="lock", default=None, help="Lock" )
     parser.add_option("-u", "--unlock", type="str", dest="unlock", default=None, help="Unlock" )
     parser.add_option("-i", "--port", type="str", dest="port", default='5', help="Port for the PID freme to apply the command to" )
-    parser.add_option("-s", "--setpoint", type="str", dest="setpoint", default='5', help="Setpoint value to be used" )
+    parser.add_option("-s", "--setpoint", type="str", dest="setpoint", default=None, help="Setpoint value to be used" )
     (options, args) = parser.parse_args()
     
     ### Start the talker ###
