@@ -39,16 +39,19 @@ class TGA_12104():
                 self.write('AMAN 0')
             
             if auto_lock:
-                self.re_lock()
+                self.re_lock(port)
             if setpoint:
                 self.write('SETP '+setpoint)
             
             self.exit()
         
-        def re_lock(self):
+        def re_lock(self,port):
             self.write('AMAN 0')
             time.sleep(0.1)
-            self.write('MOUT 5.0')
+            if port=='3':
+                self.write('MOUT 0')
+            elif port=='5':
+                self.write('MOUT 5')
             time.sleep(0.1)
             self.write('AMAN 1')
         
