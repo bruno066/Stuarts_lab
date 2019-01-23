@@ -20,7 +20,7 @@ from optparse import OptionParser
 import commands as C
 import time
 
-IP        = "169.254166.210"
+IP        = "169.254.166.210"
 PORT      = 5025                            # agilent requirement listening port
 PORT_TYPE = 'inst0'                           # agilent ethernet requirement
 
@@ -43,10 +43,14 @@ class DSA_fast_oscillo():
             if channel is None:
                 print 'You must provide at least one channel'
                 sys.exit()
-            if filename is None:
+            if filename=='DEFAULT':
                 print 'WARNING: filename is set to DEFAULT'
-                filename = 'DEFAULT'
-                
+            ### Verify all channell provided are active ###
+            for i in range(len(channel)):
+                if self.query(':'+channel[i]+':DISP?')!='1\n':
+                    print "\nChannel "+channel[i]+' is not active...\n'
+                    sys.exit()
+            
             t = time.time()
             ### Acquire ###
             
@@ -127,6 +131,9 @@ class DSA_fast_oscillo():
         self.sock.write(':STOP')
     def disconnect(self):
         self.sock.close()
+    def query(self,com):
+        self.sock.write(com)
+        return self.sock.read_raw()
         
     def idn(self):
         self.cmd("*IDN?")  
