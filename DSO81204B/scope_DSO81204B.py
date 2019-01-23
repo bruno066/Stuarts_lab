@@ -202,7 +202,7 @@ class Scope(object):
     def is_scope_stopped(self):
         ### Verify that the scope has triggered ###
         val = 0.05
-        while self.query(':RSTate?')!= 'STOP\n':
+        while self.query('TER?')!= '+1\n':
             print 'Waiting for triggering:',val
             time.sleep(val)
             val = val + 0.01
@@ -444,7 +444,7 @@ class Scope(object):
     
 if __name__=='__main__':
 
-    IP = '169.254.108.195'
+    IP = '169.254.166.210'
     
     usage = """usage: %prog [options] arg
                
