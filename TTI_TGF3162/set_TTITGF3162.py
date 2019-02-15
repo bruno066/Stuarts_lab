@@ -17,7 +17,6 @@ class TTITGF3162():
             
             self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.s.connect((IP_ADDRESS,PORT))
-            
             if query:
                 self.command = query
                 print '\nAnswer to query:',self.command
@@ -41,7 +40,7 @@ class TTITGF3162():
             if bruno_mes is True:
                 self.bruno_mes()
             
-            #self.exit()
+            self.exit()
             
         def bruno_mes(self):
             """MUST be integer numbers"""

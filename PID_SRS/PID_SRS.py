@@ -5,8 +5,8 @@ from optparse import OptionParser
 import sys
 import time
 
-class TGA_12104():
-        def __init__(self,query=None,command=None,port=None,setpoint=None,auto_lock=None,lock=None,unlock=None):
+class PID_SRS():
+        def __init__(self,query=None,command=None,smart_relock=None,port=None,setpoint=None,auto_lock=None,lock=None,unlock=None):
             
             rm = v.ResourceManager('@py')
             self.PID = rm.get_instrument('GPIB::2::INSTR')
@@ -37,7 +37,8 @@ class TGA_12104():
                 self.write('AMAN 1')
             elif unlock:
                 self.write('AMAN 0')
-            
+            if smart_relock:
+                self.smart_relock(port)
             if auto_lock:
                 self.re_lock(port)
             if setpoint:
@@ -45,6 +46,16 @@ class TGA_12104():
             
             self.exit()
         
+        def smart_relock(self,port):
+            self.write('OMON?')
+            rep = eval(self.read())
+            if port=='3':
+                if rep<-3.5 or rep>3.5:
+                    self.re_lock(port)
+            elif port=='5':
+                if rep<1.5 or rep>8.5:
+                    self.re_lock(port)
+            
         def re_lock(self,port):
             self.write('AMAN 0')
             time.sleep(0.1)
@@ -84,7 +95,8 @@ if __name__ == '__main__':
     parser.add_option("-u", "--unlock", type="str", dest="unlock", default=None, help="Unlock" )
     parser.add_option("-i", "--port", type="str", dest="port", default='5', help="Port for the PID freme to apply the command to" )
     parser.add_option("-s", "--setpoint", type="str", dest="setpoint", default=None, help="Setpoint value to be used" )
+    parser.add_option("-t", "--testout", action = "store_true", dest="testout", default=False, help="Test the output voltage and re-lock if needed" )
     (options, args) = parser.parse_args()
     
     ### Start the talker ###
-    TGA_12104(query=options.que,command=options.com,port=options.port,setpoint=options.setpoint,auto_lock=options.autolock,lock=options.lock,unlock=options.unlock)
+    PID_SRS(query=options.que,command=options.com,smart_relock=options.testout,port=options.port,setpoint=options.setpoint,auto_lock=options.autolock,lock=options.lock,unlock=options.unlock)
