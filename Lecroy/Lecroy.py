@@ -10,13 +10,13 @@ from numpy import fromstring,int8,int16,float64,sign
 IP = '169.254.166.206'
 
 class Lecroy():
-        def __init__(self,channel=None,encoding='BYTE',spe_mode=None,filename=None, FACT=8.,query=None,command=None,FORCE=False,PRINT=False,chan_spe=None):
+        def __init__(self,host=IP,channel=None,encoding='BYTE',spe_mode=None,filename=None, FACT=8.,query=None,command=None,FORCE=False,PRINT=False,chan_spe=None):
             if encoding=='BYTE':dtype=int8;NUM=256;LIM=217.          # 15% less than the maximal number possible
             elif encoding=='WORD':dtype=int16;NUM=65536;LIM=55700.   # 15% less than the maximal number possible
             
             ### Initiate communication ###
             self.command = command
-            self.scope = v.Instrument(IP)
+            self.scope = v.Instrument(host)
             
             ### Format of answers ###
             self.scope.write('CFMT DEF9,'+encoding+',BIN')
@@ -204,6 +204,7 @@ if __name__ == '__main__':
     parser.add_option("-e", "--encoding", type="string", dest="encoding", default='BYTE', help="For mofifying the encoding format of the answer" )
     parser.add_option("-m", "--spe_mode", type="string", dest="spe_mode", default=None, help="For allowing auto modification of the vertical gain. List of: spe_mode iteration number, all the channels to apply spe mode on. Note if no channel precized, all the channel are corrected. WARNING: if you want all the channels to correpond to the same trigger event, you need to spe_mode one channel only and to physically plug the cable in the first channel acquired (first in the list 1->4)")
     parser.add_option("-n", "--spe_fact", type="float", dest="spe_fact", default=8., help="For setting limits of the vertical gain, units are in number of scope division. Do not overpass 9 due to a security in the code!" )
+    parser.add_option("-i", "--ipadd", type="string", dest="ipadd", default=IP, help="Set ip address" )
     (options, args) = parser.parse_args()
     
     ### Compute channels to acquire ###
@@ -240,5 +241,5 @@ if __name__ == '__main__':
     ####################################
     
     ### Start the talker ###
-    Lecroy(channel=chan,encoding=options.encoding,spe_mode=spe_mode,query=options.que,command=options.com,filename=options.filename,FORCE=options.force,FACT=options.spe_fact,chan_spe=chan_spe)
+    Lecroy(channel=chan,encoding=options.encoding,spe_mode=spe_mode,query=options.que,command=options.com,filename=options.filename,FORCE=options.force,FACT=options.spe_fact,chan_spe=chan_spe,host=options.ipadd)
     
