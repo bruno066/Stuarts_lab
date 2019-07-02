@@ -13,7 +13,7 @@ from numpy import savetxt,linspace
 
 GPIB_PORT = 2
 
-class ando6315A():
+class AQ6315A():
         def __init__(self,query=None,command=None,FORCE=False,PORT=GPIB_PORT,filename=None,SAVE=True):
             ### establish GPIB communication ###
             r          = v.ResourceManager('@py')
@@ -94,4 +94,4 @@ if __name__ == '__main__':
     (options, args) = parser.parse_args()
 
     ### Start the talker ###
-    ando6315A(query=options.com,PORT=options.gpib_port,filename=options.filename,FORCE=options.force)
+    AQ6315A(query=options.com,PORT=options.gpib_port,filename=options.filename,FORCE=options.force)
