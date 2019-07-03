@@ -9,13 +9,11 @@ from numpy import fromstring,int8,int16,float64,sign
 
 IP = '169.254.166.210'
 
-
 conv = ['T0','T1','A','B','C','D','E','F','G','H']
 conv2 = ['T0','AB','CD','EF','GH']
 
 class DG645():
         def __init__(self,channel= None, query=None,command=None, delay= None, voltage = None, trigger = None, polarity = None, level= None, disp = None):
-          
             ### Initiate communication ###
             self.command = command
             self.scope = v.Instrument(IP)
@@ -61,22 +59,18 @@ class DG645():
                 if (channel == []):
                     for chan in conv2[1:5]:
                         self.ch_disp(chan)
-                        
                 else: 
                     self.ch_disp(channel)
                   
             sys.exit()
             
-            
 #########################################
         # PRINT OUT CODE 
         def ch_disp(self,channel):
-            
             ch1 = str(conv.index(channel[0]))
             tmpdelay = self.query('DLAY?'+ch1)
             tmpdelay = tmpdelay.split(',')
-            
-            
+        
             if len(channel) == 2:
                 ch = str(conv2.index(channel))
                 ch2 = str(conv.index(channel[1]))
@@ -90,19 +84,15 @@ class DG645():
                 print 'Level Polarity   :  '+self.query('LPOL?'+ch)+'\n'
                 print 'Delay           '+channel[0]+':  '+ conv[int(tmpdelay[0])]+tmpdelay[1]+' s'
                 print 'Delay           '+channel[1]+':  '+ conv[int(tmpdelay2[0])]+tmpdelay2[1]+' s\n' 
-            
             else:
                 print '==========CH:'+channel+'=============='
                 print 'Delay           '+channel+':  '+ conv[int(tmpdelay[0])]+tmpdelay[1]+' s\n' 
         
-                             
         #Channel delay code block 
         def ad_delay(self, channel, delay):
-            
             if len(channel) == 2:
                 ch1 = str(conv.index(channel[0]))
                 ch2 = str(conv.index(channel[1]))
-                
             else:
                 ch1 = '0'
                 ch2 = str(conv.index(channel))
@@ -116,16 +106,12 @@ class DG645():
             """Send command 'cmd' and read 'nbytes' bytes as answer."""
             self.write(cmd+'\n')
             r = self.read(nbytes)
-            
             return r
-        
         def read(self,nbytes=1000000):
-           
             return self.scope.read(nbytes)
-        
         def write(self,cmd):
-          
             self.scope.write(cmd)
+        
         
 if __name__ == '__main__':
 
@@ -138,7 +124,6 @@ if __name__ == '__main__':
                   trigger      : DG645 -f 1000000    
                   polarity     : DG645 AB -p 1  / DG645 AB -p 0
                   offset       : DG645 AB -l 2       2v level offset on AB
-                  
                """
     parser = OptionParser(usage)
     parser.add_option("-c", "--command", type="str", dest="com", default=None, help="Set the command to use." )
@@ -161,30 +146,23 @@ if __name__ == '__main__':
     	if (len(args) == 0):
     		print '\nYou must provide at least one edge\n'
     		sys.exit()
-
     	if (options.pol) or (options.voltage) or (options.level):
             if (len(args[0])==1):
                 print '\nYou must provide a channel'
                 sys.exit()
-                
         if (args[0] in conv) or (args[0] in conv2):
             chan = args[0].upper() 
-            
         else:       
             print '\nYou must provide a channel or edge'
             sys.exit()
-         
-
     if (options.disp) and (len(args) !=0):
         if (args[0] in conv) or (args[0] in conv2):
             chan = args[0].upper() 
-            
         else:       
             print '\nYou must provide a channel or edge'
             sys.exit()
     
-    
-    
+
     ### Start the talker ###
     DG645(channel= chan, query=options.que,command=options.com,delay=options.delay,voltage= options.voltage, trigger = options.freq, polarity= options.pol,level = options.level, disp = options.disp)
     

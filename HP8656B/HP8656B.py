@@ -45,9 +45,7 @@ class HPSIGGEN():
         sys.exit()
 
     #####################  FUNCTIONS ##############################################
-
     def modify_frequency(self, set_frequency):
-
         self.write('FR' + set_frequency + 'HZ')
         print 'Frequency: ' + set_frequency
 
@@ -66,20 +64,16 @@ class HPSIGGEN():
         self.write(query)
         r = self.read(length=length)
         return r
-
     def write(self, query):
         self.string = query + '\n'
         self.scope.write(self.string)
-
     def read(self, length=10000000):
         rep = self.scope.read_raw()
         return rep
 
 
 if __name__ == '__main__':
-
     usage = """usage: %prog [options] arg
-
 
                EXAMPLES:
                frequency(Hz):       HP86568 -f 10e6
@@ -87,9 +81,6 @@ if __name__ == '__main__':
                HP86568 -x
                HP86568 -z
                HP86568 -m reserved
-
-
-
                """
     parser = OptionParser(usage)
     parser.add_option("-q", "--query", type="str", dest="que", default=None, help="Set the query to use.")
@@ -99,7 +90,6 @@ if __name__ == '__main__':
     parser.add_option("-a", "--amplitude", type="str", dest="amplitude", default=None, help="Set the carrier RF amplitude (mV)")
     parser.add_option("-x", "--RFenable", action="store_true", dest="RFenable", default=False, help="Enable RF output")
     parser.add_option("-z", "--RFdisbale", action="store_true", dest="RFdisable", default=False, help="Disable RF output")
-
 
     (options, args) = parser.parse_args()
 

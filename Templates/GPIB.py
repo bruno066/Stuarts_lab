@@ -11,41 +11,41 @@ import visa as v
 import commands as C
 from numpy import savetxt,linspace
 
-class ando6315A():
-        def __init__(self,query=None,command=None,PORT=GPIB_PORT):
-            ### establish GPIB communication ###
-            r          = v.ResourceManager('@py')
-            self.scope = r.get_instrument('GPIB::'+PORT+'::INSTR')
-            
-            if query:                                         # to execute command from outside
-                print '\nAnswer to query:',query
-                self.write(query+'\n')
-                rep = self.read()
-                print rep,'\n'
-                sys.exit()
-            elif command:
-                self.command = command
-                print '\nExecuting command',self.command
-                self.scope.write(self.command)
-                print '\n'
-                sys.exit()
-                
-
+class GPIB:
+    def __init__(self,query=None,command=None,PORT=GPIB_PORT):
+        ### establish GPIB communication ###
+        r          = v.ResourceManager('@py')
+        self.scope = r.get_instrument('GPIB::'+PORT+'::INSTR')
+        
+        if query:                                         # to execute command from outside
+            print '\nAnswer to query:',query
+            self.write(query+'\n')
+            rep = self.read()
+            print rep,'\n'
             sys.exit()
+        elif command:
+            self.command = command
+            print '\nExecuting command',self.command
+            self.scope.write(self.command)
+            print '\n'
+            sys.exit()
+            
+
+        sys.exit()
 
 
-        def query(self,query,length=1000000):
-            self.write(query)
-            r = self.read(length=length)
-            return r
-            
-        def write(self,query):
-            self.string = query + '\n'
-            self.scope.write(self.string)
-            
-        def read(self,length=10000000):
-            rep = self.scope.read_raw()
-            return rep
+    def query(self,query,length=1000000):
+        self.write(query)
+        r = self.read(length=length)
+        return r
+        
+    def write(self,query):
+        self.string = query + '\n'
+        self.scope.write(self.string)
+        
+    def read(self,length=10000000):
+        rep = self.scope.read_raw()
+        return rep
 
 
 if __name__ == '__main__':
@@ -65,4 +65,4 @@ if __name__ == '__main__':
     (options, args) = parser.parse_args()
 
     ### Start the talker ###
-    ando6315A(query=options.com,PORT=options.gpib_port)
+    GPIB(query=options.com,PORT=options.gpib_port)
